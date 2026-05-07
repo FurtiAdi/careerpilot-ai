@@ -1,10 +1,14 @@
 from fastapi import APIRouter
+from app.models.job_models import JobRequest
 
 router = APIRouter()
 
 
 @router.post("/analyze-job")
-def analyze_job():
+def analyze_job(job: JobRequest):
+    description = job.job_description
+
     return {
-        "message": "Job analysis endpoint working"
+        "received_job_description": description,
+        "length": len(description)
     }
