@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.models.job_models import JobRequest
+from app.services.ai_service import generate_ai_analysis
 
 from app.services.job_service import (
     extract_skills,
@@ -15,6 +16,8 @@ def analyze_job(job: JobRequest):
 
     description = job.job_description
 
+    ai_analysis = generate_ai_analysis(description)
+
     candidate_skills = job.candidate_skills
 
     extracted_skills = extract_skills(description)
@@ -28,5 +31,6 @@ def analyze_job(job: JobRequest):
         "job_description": description,
         "detected_job_skills": extracted_skills,
         "candidate_skills": candidate_skills,
-        "match_analysis": score_results
+        "match_analysis": score_results,
+        "ai_analysis": ai_analysis
     }
