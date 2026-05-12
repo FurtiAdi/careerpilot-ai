@@ -1,4 +1,10 @@
+"use client"
+import { useState } from "react"
+
 export default function Home() {
+  const [jobDescription, setJobDescription] = useState("")
+  const [candidateSkills, setCandidateSkills] = useState("")
+
   return (
     <main className="min-h-screen bg-black text-white overflow-hidden">
 
@@ -71,6 +77,10 @@ export default function Home() {
           </label>
 
           <textarea
+            value={jobDescription}
+            onChange={(event) =>
+              setJobDescription(event.target.value)
+            }
             className="w-full h-56 bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 mb-8"
             placeholder="Paste job description here..."
           />
@@ -81,6 +91,10 @@ export default function Home() {
 
           <input
             type="text"
+            value={candidateSkills}
+            onChange={(event) =>
+              setCandidateSkills(event.target.value)
+            }
             className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 mb-8"
             placeholder="Example: Python, React, SQL, AWS"
           />
