@@ -4,6 +4,48 @@ import { useState } from "react"
 export default function Home() {
   const [jobDescription, setJobDescription] = useState("")
   const [candidateSkills, setCandidateSkills] = useState("")
+  const [loading, setLoading] = useState(false)
+
+    const analyzeJob = async () => {
+
+    setLoading(true)
+
+    try {
+
+      const skillsArray = candidateSkills
+        .split(",")
+        .map((skill) => skill.trim())
+
+      const response = await fetch(
+        "http://127.0.0.1:8000/analyze-job",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            job_description: jobDescription,
+            candidate_skills: skillsArray
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      console.log(data)
+
+    } catch (error) {
+
+      console.error(error)
+
+    } finally {
+
+      setLoading(false)
+
+    }
+  }
 
   return (
     <main className="min-h-screen bg-black text-white overflow-hidden">
@@ -100,6 +142,7 @@ export default function Home() {
           />
 
           <button
+            onClick={analyzeJob}
             className="w-full p-5 rounded-2xl font-semibold text-lg bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 transition"
           >
             Analyze Job Match
