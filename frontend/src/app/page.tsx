@@ -153,9 +153,26 @@ export default function Home() {
 
           <button
             onClick={analyzeJob}
-            className="w-full p-5 rounded-2xl font-semibold text-lg bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 transition"
+            disabled={loading}
+            className={`
+              w-full p-5 rounded-2xl font-semibold text-lg
+              bg-gradient-to-r from-purple-600 to-pink-500
+              transition flex items-center justify-center gap-3
+              ${loading
+                ? "opacity-70 cursor-not-allowed"
+                : "hover:opacity-90"
+              }
+            `}
           >
-            Analyze Job Match
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+
+                <span>Analyzing...</span>
+              </>
+            ) : (
+              "Analyze Job Match"
+            )}
           </button>
 
         </div>
