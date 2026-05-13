@@ -1,11 +1,12 @@
 "use client"
-import { useState } from "react"
+import { useState, useRef } from "react"
 
 export default function Home() {
   const [jobDescription, setJobDescription] = useState("")
   const [candidateSkills, setCandidateSkills] = useState("")
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<any>(null)
+  const resultsRef = useRef<HTMLDivElement | null>(null)
 
     const analyzeJob = async () => {
 
@@ -36,6 +37,14 @@ export default function Home() {
       const data = await response.json()
       console.log(data)
       setResults(data)
+
+      setTimeout(() => {
+
+        resultsRef.current?.scrollIntoView({
+          behavior: "smooth"
+        })
+
+      }, 200)
 
     } catch (error) {
 
@@ -152,7 +161,7 @@ export default function Home() {
         </div>
                 {results && (
 
-          <div className="mt-10 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md">
+            <div ref={resultsRef} className="mt-10 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md" >
 
             <h2 className="text-3xl font-bold mb-8">
               Analysis Results
