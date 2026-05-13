@@ -5,6 +5,7 @@ export default function Home() {
   const [jobDescription, setJobDescription] = useState("")
   const [candidateSkills, setCandidateSkills] = useState("")
   const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<any>(null)
 
     const analyzeJob = async () => {
 
@@ -33,8 +34,8 @@ export default function Home() {
       )
 
       const data = await response.json()
-
       console.log(data)
+      setResults(data)
 
     } catch (error) {
 
@@ -149,8 +150,118 @@ export default function Home() {
           </button>
 
         </div>
+                {results && (
+
+          <div className="mt-10 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md">
+
+            <h2 className="text-3xl font-bold mb-8">
+              Analysis Results
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+
+              <div className="bg-black/30 rounded-2xl p-6">
+
+                <h3 className="text-xl font-semibold mb-4">
+                  Match Score
+                </h3>
+
+                <div className="text-5xl font-bold text-purple-400">
+                  {results.match_analysis.match_score}%
+                </div>
+
+              </div>
+
+              <div className="bg-black/30 rounded-2xl p-6">
+
+                <h3 className="text-xl font-semibold mb-4">
+                  Skills Found
+                </h3>
+
+                <div className="flex flex-wrap gap-2">
+
+                  {results.detected_job_skills.map(
+                    (skill: string) => (
+
+                      <span
+                        key={skill}
+                        className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm"
+                      >
+                        {skill}
+                      </span>
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+
+              <div className="bg-black/30 rounded-2xl p-6">
+
+                <h3 className="text-xl font-semibold mb-4 text-green-400">
+                  Matched Skills
+                </h3>
+
+                <ul className="space-y-2">
+
+                  {results.match_analysis.matched_skills.map(
+                    (skill: string) => (
+
+                      <li key={skill}>
+                        ✅ {skill}
+                      </li>
+                    )
+                  )}
+
+                </ul>
+
+              </div>
+
+              <div className="bg-black/30 rounded-2xl p-6">
+
+                <h3 className="text-xl font-semibold mb-4 text-red-400">
+                  Missing Skills
+                </h3>
+
+                <ul className="space-y-2">
+
+                  {results.match_analysis.missing_skills.map(
+                    (skill: string) => (
+
+                      <li key={skill}>
+                        ❌ {skill}
+                      </li>
+                    )
+                  )}
+
+                </ul>
+
+              </div>
+
+            </div>
+
+            <div className="bg-black/30 rounded-2xl p-6">
+
+              <h3 className="text-2xl font-semibold mb-4">
+                AI Analysis
+              </h3>
+
+              <p className="text-gray-300 whitespace-pre-line leading-8">
+                {results.ai_analysis}
+              </p>
+
+            </div>
+
+          </div>
+
+        )}
 
       </div>
+      
 
     </main>
   )
