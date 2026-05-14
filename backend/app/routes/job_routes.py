@@ -55,7 +55,12 @@ async def upload_resume(
         temp_file_path
     )
 
+    detected_skills = extract_skills(
+        extracted_text
+    )
+
     return {
         "filename": file.filename,
-        "extracted_text": extracted_text
+        "extracted_text": extracted_text,
+        "detected_skills": detected_skills
     }
