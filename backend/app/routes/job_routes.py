@@ -9,12 +9,19 @@ from app.services.job_service import (
     extract_skills,
     calculate_match_score
 )
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from app.database.database import get_db
+from app.models.analysis_model import Analysis
 
 router = APIRouter()
 
 
 @router.post("/analyze-job")
-def analyze_job(job: JobRequest):
+def analyze_job(
+    job: JobRequest,
+    db: Session = Depends(get_db)
+):
 
     description = job.job_description
 
@@ -31,6 +38,25 @@ def analyze_job(job: JobRequest):
         extracted_skills,
         candidate_skills
     )
+
+    new_analysis = Analysis(
+
+        job_description=description,
+
+        candidate_skills=", ".join(
+            candidate_skills
+        ),
+
+        match_score=score_results["match_score"],
+
+        ai_summary=ai_analysis["summary"]
+    )
+
+    db.add(new_analysis)
+
+    db.commit()
+
+    db.refresh(new_analysis)
 
     return {
         "job_description": description,
@@ -67,3 +93,12 @@ async def upload_resume(
         "extracted_text": extracted_text,
         "detected_skills": detected_skills
     }
+
+@router.get("/analyses")
+def get_analyses(
+    db: Session = Depends(get_db)
+):
+
+    analyses = db.query(Analysis).all()
+
+    return analyses
