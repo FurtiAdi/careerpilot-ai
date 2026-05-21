@@ -1,8 +1,11 @@
+from app.database.database import engine
+from app.database.database import Base
+from app.models.analysis_model import Analysis
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.routes.job_routes import router as job_router
 
+Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 app.add_middleware(
