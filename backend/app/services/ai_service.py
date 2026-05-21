@@ -1,4 +1,5 @@
 import os
+import json
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -10,18 +11,40 @@ client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
 
-def generate_ai_analysis(job_description: str):
+def generate_ai_analysis(
+    job_description: str,
+    candidate_skills: list
+):
 
     prompt = f"""
-    Analyze this job description.
+        You are an AI career assistant.
 
-    Return:
-    - summary
-    - important skills
-    - experience level
+        Analyze the following job description and candidate skills.
 
-    Job Description:
-    {job_description}
+        Return your response ONLY as valid JSON.
+
+        Job Description:
+        {job_description}
+
+        Candidate Skills:
+        {candidate_skills}
+
+        JSON format:
+        {{
+        "summary": "short summary",
+        "strengths": [
+            "strength 1",
+            "strength 2"
+        ],
+        "missing_requirements": [
+            "missing skill 1",
+            "missing skill 2"
+        ],
+        "recommendations": [
+            "recommendation 1",
+            "recommendation 2"
+        ]
+        }}
     """
 
     response = client.chat.completions.create(
@@ -34,4 +57,8 @@ def generate_ai_analysis(job_description: str):
         ]
     )
 
-    return response.choices[0].message.content
+    ai_response = response.choices[0].message.content
+
+    parsed_response = json.loads(ai_response)
+
+    return parsed_response

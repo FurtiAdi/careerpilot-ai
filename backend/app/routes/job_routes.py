@@ -18,9 +18,12 @@ def analyze_job(job: JobRequest):
 
     description = job.job_description
 
-    ai_analysis = generate_ai_analysis(description)
-
     candidate_skills = job.candidate_skills
+
+    ai_analysis = generate_ai_analysis(
+        description,
+        candidate_skills
+    )
 
     extracted_skills = extract_skills(description)
 
