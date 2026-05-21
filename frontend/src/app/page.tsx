@@ -36,10 +36,25 @@ export default function Home() {
 
   const analyzeJob = async () => {
 
-    // Enable loading state
-    setLoading(true)
+    // Validation
+    if (!jobDescription.trim()) {
+      alert("Please enter a job description.")
+      return
+    }
+
+    if (!candidateSkills.trim()) {
+      alert("Please enter your skills.")
+      return
+    }
+
+    if (!resumeFile) {
+      alert("Please upload your resume.")
+      return
+    }
 
     try {
+      // Enable loading state      
+      setLoading(true)
 
       // Convert comma-separated skills into array
       const skillsArray = candidateSkills
@@ -158,9 +173,15 @@ export default function Home() {
 
     <main className="min-h-screen bg-black text-white overflow-hidden">
 
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black" />
+      {/* Purple glow background */}
+      <div className="absolute top-40 left-10 w-72 h-72 bg-purple-600/20 blur-[120px] rounded-full" />
 
+      {/* Pink glow background */}
+      <div className="absolute top-96 right-10 w-72 h-72 bg-pink-600/20 blur-[120px] rounded-full" />
+      
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#120018] via-black to-black" />
+      
       {/* Main page container */}
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
 
@@ -177,7 +198,15 @@ export default function Home() {
           </div>
 
           {/* Main heading */}
-          <h1 className="text-6xl font-bold leading-tight mb-6">
+          <h1
+            className="
+              text-5xl font-bold
+              leading-[1.1]
+              mb-6
+              max-w-5xl
+              mx-auto
+            "
+          >
 
             Analyze Job Descriptions.
             <br />
@@ -251,26 +280,58 @@ export default function Home() {
 
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
 
-
-          {/* Resume Upload */}
-          <label className="block text-lg font-semibold mb-3">
+          <h2 className="text-2xl font-semibold mb-6">
             Upload Resume (PDF)
-          </label>
-
+          </h2>
+          {/* Resume Upload */}
           <div className="mb-8">
 
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={uploadResume}
-              className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-gray-400"
-            />
+            <label
+              className="
+                flex items-center justify-center
+                w-full h-24
+                border border-white/10
+                rounded-2xl
+                bg-black/40
+                hover:border-purple-400
+                hover:bg-purple-500/5
+                transition-all duration-300
+                cursor-pointer
+              "
+            >
+
+              <div className="text-center">
+
+                <p className="text-lg font-medium text-white">
+                  Upload Resume
+                </p>
+
+                <p className="text-sm text-gray-500 mt-1">
+                  PDF files only
+                </p>
+
+                {resumeFile && (
+                  <p className="mt-2 text-purple-300 text-sm">
+                    {resumeFile.name}
+                  </p>
+                )}
+
+              </div>
+
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={uploadResume}
+                className="hidden"
+              />
+
+            </label>
 
           </div>
 
 
           {/* Job Description */}
-          <label className="block text-lg font-semibold mb-3">
+          <label className="block text-lg font-semibold mb-3 text-gray-100">
             Job Description
           </label>
 
@@ -279,13 +340,19 @@ export default function Home() {
             onChange={(event) =>
               setJobDescription(event.target.value)
             }
-            className="w-full h-56 bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 mb-8"
+            className="
+              w-full h-44 bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder:text-gray-500
+              focus:outline-none 
+              focus:border-purple-500
+              focus:ring-2
+              focus:ring-purple-500/20 mb-8
+            "
             placeholder="Paste job description here..."
           />
 
 
           {/* Candidate Skills */}
-          <label className="block text-lg font-semibold mb-3">
+          <label className="block text-lg font-semibold mb-3 text-gray-100">
             Candidate Skills
           </label>
 
@@ -295,7 +362,7 @@ export default function Home() {
             onChange={(event) =>
               setCandidateSkills(event.target.value)
             }
-            className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 mb-8"
+            className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 mb-8"
             placeholder="Example: Python, React, SQL, AWS"
           />
 
@@ -307,14 +374,20 @@ export default function Home() {
             className={`
               w-full p-5 rounded-2xl font-semibold text-lg
               bg-gradient-to-r from-purple-600 to-pink-500
-              transition flex items-center justify-center gap-3
+              flex items-center justify-center gap-3
+              shadow-lg shadow-pink-500/20
+              transition-all duration-300
               ${loading
                 ? "opacity-70 cursor-not-allowed"
-                : "hover:opacity-90"
+                : `
+                  hover:opacity-95
+                  hover:scale-[1.01]
+                  hover:shadow-pink-500/40
+                  active:scale-[0.99]
+                `
               }
             `}
           >
-
             {/* Loading State */}
             {loading ? (
               <>

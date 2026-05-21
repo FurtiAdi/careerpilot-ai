@@ -31,13 +31,28 @@ export default function HistoryPage() {
     }
   }
 
+  const getScoreColor = (
+    score: number
+  ) => {
+
+    if (score >= 80) {
+      return "text-green-400"
+    }
+
+    if (score >= 50) {
+      return "text-purple-400"
+    }
+
+    return "text-red-400"
+  }
+
   return (
 
-    <main className="min-h-screen bg-black text-white p-10">
+    <main className="min-h-screen bg-black text-white px-10 py-16">
 
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-5xl mx-auto">
 
-        <h1 className="text-5xl font-bold mb-10 bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">
+        <h1 className="text-4xl font-bold mb-10 bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">
           Analysis History
         </h1>
 
@@ -47,17 +62,49 @@ export default function HistoryPage() {
 
             <div
               key={analysis.id}
-              className="bg-white/5 border border-white/10 rounded-3xl p-8"
+              className="
+                bg-gradient-to-br from-white/5 to-purple-500/5
+                border border-white/10
+                rounded-3xl
+                p-8
+                transition-all
+                duration-300
+                hover:scale-[1.01]
+                hover:border-purple-500/30
+              "
             >
 
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-start justify-between mb-8">
 
-                <h2 className="text-2xl font-semibold">
-                  Analysis #{analysis.id}
-                </h2>
+                <div>
 
-                <div className="text-3xl font-bold text-purple-400">
-                  {analysis.match_score}%
+                  <h2 className="text-2xl font-semibold">
+                    Analysis #{analysis.id}
+                  </h2>
+
+                  <p className="text-sm text-gray-500 mt-2">
+                    {new Date(
+                      analysis.created_at
+                    ).toLocaleDateString()}
+                  </p>
+
+                </div>
+
+                <div className="text-right">
+
+                  <p className="text-sm text-gray-500 mb-2">
+                    Match Score
+                  </p>
+
+                  <div
+                    className={`
+                      text-4xl font-bold
+                      ${getScoreColor(analysis.match_score)}
+                    `}
+                  >
+                    {analysis.match_score}%
+                  </div>
+
                 </div>
 
               </div>
