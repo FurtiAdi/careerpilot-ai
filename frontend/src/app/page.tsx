@@ -281,7 +281,7 @@ export default function Home() {
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
 
           <h2 className="text-2xl font-semibold mb-6">
-            Upload Resume (PDF)
+            Upload Resume
           </h2>
           {/* Resume Upload */}
           <div className="mb-8">
@@ -373,8 +373,11 @@ export default function Home() {
             disabled={loading}
             className={`
               w-full p-5 rounded-2xl font-semibold text-lg
-              bg-gradient-to-r from-purple-600 to-pink-500
-              flex items-center justify-center gap-3
+              bg-gradient-to-r 
+              from-purple-600 
+              to-pink-500
+              flex items-center 
+              justify-center gap-3
               shadow-lg shadow-pink-500/20
               transition-all duration-300
               ${loading
@@ -425,78 +428,114 @@ export default function Home() {
                 TOP RESULT CARDS
             ========================= */}
 
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 gap-6 mb-8">
 
 
               {/* Match Score Card */}
               <div className="bg-black/30 rounded-2xl p-6">
 
-                <h3 className="text-xl font-semibold mb-4">
-                  Match Score
+                <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  📊 Match Score
                 </h3>
 
-                <div className="space-y-5">
+                <div className="flex flex-col items-center justify-center">
 
-                  <div className="flex items-end justify-between">
+                  {/* Circle Container */}
+                  <div className="relative w-52 h-52">
 
-                    <div>
+                    {/* Background Circle */}
+                    <svg
+                      className="w-full h-full rotate-[-90deg]"
+                      viewBox="0 0 200 200"
+                    >
+
+                      <circle
+                        cx="100"
+                        cy="100"
+                        r="85"
+                        stroke="rgba(255,255,255,0.08)"
+                        strokeWidth="14"
+                        fill="none"
+                      />
+
+                      {/* Progress Circle */}
+                      <circle
+                        cx="100"
+                        cy="100"
+                        r="85"
+                        stroke="url(#gradient)"
+                        strokeWidth="14"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={534}
+                        strokeDashoffset={
+                          534 -
+                          (534 *
+                            results.match_analysis.match_score) /
+                            100
+                        }
+                        className="
+                          transition-all
+                          duration-[2000ms]
+                          ease-out
+                        "
+                      />
+
+                      {/* Gradient */}
+                      <defs>
+
+                        <linearGradient
+                          id="gradient"
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="100%"
+                        >
+
+                          <stop
+                            offset="0%"
+                            stopColor="#a855f7"
+                          />
+
+                          <stop
+                            offset="100%"
+                            stopColor="#ec4899"
+                          />
+
+                        </linearGradient>
+
+                      </defs>
+
+                    </svg>
+
+                    {/* Center Score */}
+                    <div
+                      className="
+                        absolute inset-0
+                        flex flex-col
+                        items-center justify-center
+                      "
+                    >
 
                       <p className="text-gray-400 text-sm mb-2">
-                        Resume Match
+                        Match Score
                       </p>
 
-                      <h2 className="text-4xl font-bold text-white">
+                      <h2
+                        className="
+                          text-5xl font-bold
+                          bg-gradient-to-r
+                          from-purple-300
+                          to-pink-400
+                          text-transparent bg-clip-text
+                        "
+                      >
                         {results.match_analysis.match_score}%
                       </h2>
 
                     </div>
 
-                    {/* AI Score Badge */}
-                    <div className="text-sm text-purple-300 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full">
-                      AI Score
-                    </div>
-
                   </div>
-
-
-                  {/* Animated Progress Bar */}
-                  <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden shadow-inner">
-
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-1000"
-                      style={{
-                        width: `${results.match_analysis.match_score}%`
-                      }}
-                    />
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              {/* Skills Found Card */}
-              <div className="bg-black/30 rounded-2xl p-6">
-
-                <h3 className="text-xl font-semibold mb-4">
-                  Skills Found
-                </h3>
-
-                <div className="flex flex-wrap gap-2">
-
-                  {results.detected_job_skills.map(
-                    (skill: string) => (
-
-                      <span
-                        key={skill}
-                        className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm"
-                      >
-                        {skill}
-                      </span>
-
-                    )
-                  )}
 
                 </div>
 
@@ -515,23 +554,39 @@ export default function Home() {
               {/* Matched Skills */}
               <div className="bg-black/30 rounded-2xl p-6">
 
-                <h3 className="text-xl font-semibold mb-4 text-green-400">
-                  Matched Skills
+                <h3 className="text-xl font-bold mb-6 text-green-400">
+                    ✅ Matched Skills
                 </h3>
 
-                <ul className="space-y-2">
+                <div className="flex flex-wrap gap-3">
 
-                  {results.match_analysis.matched_skills.map(
+                  {results.match_analysis.matched_skills.length > 0 ? (
+                    results.match_analysis.matched_skills.map(
                     (skill: string) => (
 
-                      <li key={skill}>
-                        ✅ {skill}
-                      </li>
+                      <div
+                        key={skill}
+                        className="
+                          px-4 py-2 rounded-full
+                          bg-green-500/10
+                          border border-green-500/20
+                          text-green-300
+                          text-sm font-medium
+                        "
+                      >
+                        {skill}
+                      </div>
 
                     )
+                  )) : (
+
+                    <p className="text-gray-500">
+                      No matched skills found.
+                    </p>
+
                   )}
 
-                </ul>
+                </div>
 
               </div>
 
@@ -539,23 +594,31 @@ export default function Home() {
               {/* Missing Skills */}
               <div className="bg-black/30 rounded-2xl p-6">
 
-                <h3 className="text-xl font-semibold mb-4 text-red-400">
-                  Missing Skills
+                <h3 className="text-xl font-bold mb-6 text-red-400">
+                  ❌ Missing Skills
                 </h3>
 
-                <ul className="space-y-2">
+                <div className="flex flex-wrap gap-3">
 
                   {results.match_analysis.missing_skills.map(
                     (skill: string) => (
-
-                      <li key={skill}>
-                        ❌ {skill}
-                      </li>
+                      <div
+                        key={skill}
+                        className="
+                          px-4 py-2 rounded-full
+                          bg-red-500/10
+                          border border-red-500/20
+                          text-red-300
+                          text-sm font-medium
+                        "
+                      >
+                        {skill}
+                      </div>
 
                     )
                   )}
 
-                </ul>
+                </div>
 
               </div>
 
@@ -593,6 +656,8 @@ export default function Home() {
                   </p>
 
                 </div>
+
+                
 
 
                 {/* Strengths Section */}
