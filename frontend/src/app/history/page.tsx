@@ -2,9 +2,18 @@
 
 import { useEffect, useState } from "react"
 
+type Analysis = {
+  id: number
+  job_description: string
+  candidate_skills: string
+  match_score: number
+  ai_summary: string
+  created_at: string
+}
+
 export default function HistoryPage() {
 
-  const [analyses, setAnalyses] = useState<any[]>([])
+  const [analyses, setAnalyses] = useState<Analysis[]>([])
 
   useEffect(() => {
 
@@ -29,6 +38,34 @@ export default function HistoryPage() {
       console.error(error)
 
     }
+  }
+
+  const deleteAnalysis = async (
+    id: number
+  ) => {
+
+    try {
+
+      await fetch(
+        `http://127.0.0.1:8000/analyses/${id}`,
+        {
+          method: "DELETE"
+        }
+      )
+
+      setAnalyses((prev) =>
+        prev.filter(
+          (analysis) =>
+            analysis.id !== id
+        )
+      )
+
+    } catch (error) {
+
+      console.error(error)
+
+    }
+
   }
 
   const getScoreColor = (
@@ -57,6 +94,30 @@ export default function HistoryPage() {
         </h1>
 
         <div className="grid gap-6">
+
+          {analyses.length === 0 && (
+
+            <div
+              className="
+                text-center
+                py-20
+                border border-white/10
+                rounded-3xl
+                bg-white/5
+              "
+            >
+
+              <h2 className="text-2xl font-semibold mb-4">
+                No Analyses Yet
+              </h2>
+
+              <p className="text-gray-400">
+                Your saved job analyses will appear here.
+              </p>
+
+            </div>
+
+          )}
 
           {analyses.map((analysis) => (
 
@@ -104,6 +165,23 @@ export default function HistoryPage() {
                   >
                     {analysis.match_score}%
                   </div>
+
+                  <button
+                    onClick={() =>
+                      deleteAnalysis(analysis.id)
+                    }
+                    className="
+                      mt-4 px-4 py-2
+                      rounded-xl
+                      bg-red-500/10
+                      border border-red-500/20
+                      text-red-300
+                      hover:bg-red-500/20
+                      transition-all duration-300
+                    "
+                  >
+                    Delete
+                  </button>
 
                 </div>
 
