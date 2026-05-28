@@ -102,3 +102,26 @@ def get_analyses(
     analyses = db.query(Analysis).all()
 
     return analyses
+
+@router.delete("/analyses/{analysis_id}")
+def delete_analysis(
+    analysis_id: int,
+    db: Session = Depends(get_db)
+):
+
+    analysis = db.query(Analysis).filter(
+        Analysis.id == analysis_id
+    ).first()
+
+    if not analysis:
+        return {
+            "error": "Analysis not found"
+        }
+
+    db.delete(analysis)
+
+    db.commit()
+
+    return {
+        "message": "Analysis deleted"
+    }
