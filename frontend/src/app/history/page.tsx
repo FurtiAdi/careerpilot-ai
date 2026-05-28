@@ -26,8 +26,17 @@ export default function HistoryPage() {
 
     try {
 
+      const token = localStorage.getItem(
+        "token"
+      )
+
       const response = await fetch(
-        "http://127.0.0.1:8000/analyses"
+        "http://127.0.0.1:8000/analyses",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       )
 
       const data = await response.json()
@@ -49,10 +58,18 @@ export default function HistoryPage() {
 
     try {
 
+      const token = localStorage.getItem(
+        "token"
+      )
+
       await fetch(
         `http://127.0.0.1:8000/analyses/${id}`,
         {
-          method: "DELETE"
+          method: "DELETE",
+
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
       )
 

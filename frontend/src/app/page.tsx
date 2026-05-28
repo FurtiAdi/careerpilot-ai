@@ -68,7 +68,10 @@ export default function Home() {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${
+              localStorage.getItem("token")
+            }`
           },
 
           // Send job description and skills
