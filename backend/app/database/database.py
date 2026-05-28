@@ -12,6 +12,8 @@ from sqlalchemy.orm import sessionmaker
 load_dotenv()
 
 
+
+
 DATABASE_URL = (
     f"postgresql://"
     f"{os.getenv('POSTGRES_USER')}:"
@@ -42,3 +44,4 @@ def get_db():
 
     finally:
         db.close()
+
