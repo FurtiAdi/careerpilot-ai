@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 type Analysis = {
   id: number
@@ -15,8 +16,20 @@ export default function HistoryPage() {
 
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
+
+    const token = localStorage.getItem(
+      "token"
+    )
+
+    if (!token) {
+
+      router.push("/login")
+
+      return
+    }
 
     fetchAnalyses()
 
@@ -38,6 +51,15 @@ export default function HistoryPage() {
           }
         }
       )
+      
+      if (response.status === 401) {
+
+        localStorage.removeItem("token")
+
+        router.push("/login")
+
+        return
+      }
 
       const data = await response.json()
 
