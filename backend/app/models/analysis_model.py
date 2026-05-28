@@ -2,7 +2,8 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
-    DateTime
+    DateTime, 
+    ForeignKey
 )
 
 from datetime import datetime
@@ -18,6 +19,11 @@ class Analysis(Base):
         Integer,
         primary_key=True,
         index=True
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id")
     )
 
     job_description = Column(String)
