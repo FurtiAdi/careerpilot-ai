@@ -1,4 +1,10 @@
-from sqlalchemy import Column, Integer, Text, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime
+)
+
 from datetime import datetime
 
 from app.database.database import Base
@@ -14,12 +20,15 @@ class Analysis(Base):
         index=True
     )
 
-    job_description = Column(Text)
+    job_description = Column(String)
 
-    candidate_skills = Column(Text)
+    candidate_skills = Column(String)
 
     match_score = Column(Integer)
 
-    ai_summary = Column(Text)
+    ai_summary = Column(String)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )

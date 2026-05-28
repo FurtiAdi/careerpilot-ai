@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes.job_routes import router as job_router
 
 Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
 
 app.add_middleware(
