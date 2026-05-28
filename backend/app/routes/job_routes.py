@@ -23,13 +23,20 @@ from app.services.auth_service import (
     create_access_token     
 )
 
+from app.dependencies.auth_dependencies import (
+    get_current_user
+)
+
+
+
 router = APIRouter()
 
 
 @router.post("/analyze-job")
 def analyze_job(
     job: JobRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
 
     description = job.job_description
@@ -49,6 +56,8 @@ def analyze_job(
     )
 
     new_analysis = Analysis(
+
+        user_id=current_user.id,
 
         job_description=description,
 
@@ -105,17 +114,21 @@ async def upload_resume(
 
 @router.get("/analyses")
 def get_analyses(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
 
-    analyses = db.query(Analysis).all()
+    analyses = db.query(Analysis).filter(
+        Analysis.user_id == current_user.id
+    ).all()
 
     return analyses
 
 @router.delete("/analyses/{analysis_id}")
 def delete_analysis(
     analysis_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
 
     analysis = db.query(Analysis).filter(
