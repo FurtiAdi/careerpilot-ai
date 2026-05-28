@@ -14,6 +14,7 @@ type Analysis = {
 export default function HistoryPage() {
 
   const [analyses, setAnalyses] = useState<Analysis[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
 
@@ -32,10 +33,12 @@ export default function HistoryPage() {
       const data = await response.json()
 
       setAnalyses(data)
+      setLoading(false)
 
     } catch (error) {
 
       console.error(error)
+      setLoading(false)
 
     }
   }
@@ -94,6 +97,16 @@ export default function HistoryPage() {
         </h1>
 
         <div className="grid gap-6">
+
+          {loading && (
+
+            <div className="text-center py-20">
+
+              <div className="inline-block w-10 h-10 border-4 border-purple-500/20 border-t-purple-400 rounded-full animate-spin" />
+
+            </div>
+
+          )}
 
           {analyses.length === 0 && (
 
@@ -167,9 +180,17 @@ export default function HistoryPage() {
                   </div>
 
                   <button
-                    onClick={() =>
-                      deleteAnalysis(analysis.id)
-                    }
+                    onClick={() => {
+
+                      const confirmed = confirm(
+                        "Delete this analysis?"
+                      )
+
+                      if (confirmed) {
+                        deleteAnalysis(analysis.id)
+                      }
+
+                    }}
                     className="
                       mt-4 px-4 py-2
                       rounded-xl
