@@ -1,16 +1,19 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
 
-  const [email, setEmail] = useState("")
+    const [email, setEmail] = useState("")
 
-  const [password, setPassword] = useState("")
+    const [password, setPassword] = useState("")
 
-  const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(false)
 
-  const loginUser = async () => {
+    const router = useRouter()
+
+    const loginUser = async () => {
 
     try {
 
@@ -41,7 +44,7 @@ export default function LoginPage() {
           data.access_token
         )
 
-        alert("Login successful!")
+        router.push("/")
 
       } else {
 

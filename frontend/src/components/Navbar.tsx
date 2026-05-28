@@ -82,7 +82,8 @@ export default function Navbar() {
             History
           </Link>
 
-          <button
+          <Link
+            href="/login"
             className="
               px-5 py-2 rounded-full
               border border-purple-500/30
@@ -92,7 +93,7 @@ export default function Navbar() {
             "
           >
             Sign In
-          </button>
+          </Link>
 
         </div>
 
