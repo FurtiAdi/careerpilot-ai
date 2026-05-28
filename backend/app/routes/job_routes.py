@@ -14,6 +14,13 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.analysis_model import Analysis
 
+from app.models.user_model import User
+from app.models.user_schema import UserCreate
+
+from app.services.auth_service import (
+    hash_password
+)
+
 router = APIRouter()
 
 
@@ -124,4 +131,41 @@ def delete_analysis(
 
     return {
         "message": "Analysis deleted"
+    }
+
+@router.post("/register")
+def register_user(
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
+
+    existing_user = db.query(User).filter(
+        User.email == user.email
+    ).first()
+
+    if existing_user:
+
+        return {
+            "error": "Email already exists"
+        }
+
+    hashed_password = hash_password(
+        user.password
+    )
+
+    new_user = User(
+
+        email=user.email,
+
+        hashed_password=hashed_password
+    )
+
+    db.add(new_user)
+
+    db.commit()
+
+    db.refresh(new_user)
+
+    return {
+        "message": "User registered successfully"
     }

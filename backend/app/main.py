@@ -4,6 +4,7 @@ from app.models.analysis_model import Analysis
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.job_routes import router as job_router
+from app.models.user_model import User
 
 Base.metadata.create_all(bind=engine)
 
