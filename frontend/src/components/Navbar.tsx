@@ -7,7 +7,7 @@ export default function Navbar() {
 
     <nav
       className="
-        sticky top-0 z-50
+        fixed top-0 left-0 w-full z-50
         backdrop-blur-xl
         bg-black/40
         border-b border-white/10

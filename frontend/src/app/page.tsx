@@ -171,7 +171,7 @@ export default function Home() {
 
   return (
 
-    <main className="min-h-screen bg-black text-white overflow-hidden">
+    <main className="min-h-screen pt-20 bg-black text-white overflow-hidden">
 
       {/* Purple glow background */}
       <div className="absolute top-40 left-10 w-72 h-72 bg-purple-600/20 blur-[120px] rounded-full" />

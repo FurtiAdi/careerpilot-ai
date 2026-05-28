@@ -88,7 +88,7 @@ export default function HistoryPage() {
 
   return (
 
-    <main className="min-h-screen bg-black text-white px-10 py-16">
+    <main className="min-h-screen pt-28 bg-black text-white px-10 py-16">
 
       <div className="max-w-5xl mx-auto">
 
