@@ -17,6 +17,16 @@ class User(Base):
         index=True
     )
 
+    
+    first_name = Column(String)
+
+    last_name = Column(String)
+
+    profile_picture = Column(String, nullable=True)
+
+    resume_filename = Column(String, nullable=True)
+
+
     email = Column(
         String,
         unique=True,
