@@ -20,7 +20,7 @@ from app.models.user_schema import UserCreate
 from app.services.auth_service import (
     hash_password,
     verify_password,
-    create_access_token     
+    create_access_token
 )
 
 from app.dependencies.auth_dependencies import (
@@ -132,7 +132,8 @@ def delete_analysis(
 ):
 
     analysis = db.query(Analysis).filter(
-        Analysis.id == analysis_id
+        Analysis.id == analysis_id,
+        Analysis.user_id == current_user.id
     ).first()
 
     if not analysis:
