@@ -1,7 +1,20 @@
+"use client"
 import Link from "next/link"
 import { Sparkles } from "lucide-react"
+import { useRouter } from "next/navigation"
+
 
 export default function Navbar() {
+  const router = useRouter()
+
+  const logoutUser = () => {
+
+    localStorage.removeItem("token")
+
+    router.push("/login")
+
+  }
+
 
   return (
 
@@ -82,18 +95,19 @@ export default function Navbar() {
             History
           </Link>
 
-          <Link
-            href="/login"
+          <button
+            onClick={logoutUser}
             className="
-              px-5 py-2 rounded-full
-              border border-purple-500/30
-              bg-purple-500/10
-              hover:bg-purple-500/20
-              transition
+              px-5 py-2 rounded-xl
+              bg-red-500/10
+              border border-red-500/20
+              text-red-300
+              hover:bg-red-500/20
+              transition-all duration-300
             "
           >
-            Sign In
-          </Link>
+            Logout
+          </button>
 
         </div>
 
