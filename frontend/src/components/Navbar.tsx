@@ -1,20 +1,29 @@
 "use client"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 
 export default function Navbar() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
   const router = useRouter()
 
+  useEffect(() => {
+
+      const token = localStorage.getItem("token")
+
+      setIsAuthenticated(!!token)
+
+    }, [])
+
   const logoutUser = () => {
-
     localStorage.removeItem("token")
-
+    setIsAuthenticated(false)
     router.push("/login")
-
   }
-
+  
 
   return (
 
@@ -84,35 +93,59 @@ export default function Navbar() {
             Home
           </Link>
 
-          <Link
-            href="/history"
-            className="
-              text-gray-300
-              hover:text-white
-              transition
-            "
-          >
-            History
-          </Link>
 
-          <button
-            onClick={logoutUser}
-            className="
-              px-5 py-2 rounded-xl
-              bg-red-500/10
-              border border-red-500/20
-              text-red-300
-              hover:bg-red-500/20
-              transition-all duration-300
-            "
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
 
+              {isAuthenticated ? (
+
+                <>
+
+                  <Link
+                    href="/history"
+                    className="
+                      text-gray-300
+                      hover:text-white
+                      transition
+                    "
+                  >
+                    History
+                  </Link>
+
+                  <button
+                    onClick={logoutUser}
+                    className="
+                      px-5 py-2 rounded-xl
+                      bg-red-500/10
+                      border border-red-500/20
+                      text-red-300
+                      hover:bg-red-500/20
+                      transition-all duration-300
+                    "
+                  >
+                    Logout
+                  </button>
+
+                </>
+
+              ) : (
+
+                <Link
+                  href="/login"
+                  className="
+                    px-5 py-2 rounded-xl
+                    border border-white/10
+                    hover:border-purple-500/40
+                    transition-all duration-300
+                  "
+                >
+                  Sign In
+                </Link>
+
+              )}
+
+            </div>
         </div>
-
       </div>
-
     </nav>
   )
 }

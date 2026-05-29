@@ -44,7 +44,7 @@ export default function LoginPage() {
           data.access_token
         )
 
-        router.push("/")
+        window.location.href = "/"
 
       } else {
 
