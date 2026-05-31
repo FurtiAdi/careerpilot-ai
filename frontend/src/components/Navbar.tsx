@@ -80,70 +80,48 @@ export default function Navbar() {
         </Link>
 
         {/* Navigation */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6">
+          {isAuthenticated && (
+            <>
+              <Link
+                href="/"
+                className="
+                  text-gray-300
+                  hover:text-white
+                  transition
+                "
+              >
+                Home
+              </Link>
 
-          <Link
-            href="/"
-            className="
-              text-gray-300
-              hover:text-white
-              transition
-            "
-          >
-            Home
-          </Link>
+              <Link
+                href="/history"
+                className="
+                  text-gray-300
+                  hover:text-white
+                  transition
+                "
+              >
+                History
+              </Link>
 
-
-          <div className="flex items-center gap-4">
-
-              {isAuthenticated ? (
-
-                <>
-
-                  <Link
-                    href="/history"
-                    className="
-                      text-gray-300
-                      hover:text-white
-                      transition
-                    "
-                  >
-                    History
-                  </Link>
-
-                  <button
-                    onClick={logoutUser}
-                    className="
-                      px-5 py-2 rounded-xl
-                      bg-red-500/10
-                      border border-red-500/20
-                      text-red-300
-                      hover:bg-red-500/20
-                      transition-all duration-300
-                    "
-                  >
-                    Logout
-                  </button>
-
-                </>
-
-              ) : (
-
-                <Link
-                  href="/login"
-                  className="
-                    px-5 py-2 rounded-xl
-                    border border-white/10
-                    hover:border-purple-500/40
-                    transition-all duration-300
-                  "
-                >
-                  Sign In
-                </Link>
-
-              )}
-
-            </div>
+              <button
+                onClick={logoutUser}
+                className="
+                  px-5 py-2 rounded-xl
+                  bg-red-500/10
+                  border border-red-500/20
+                  text-red-300
+                  hover:bg-red-500/20
+                  transition-all duration-300
+                "
+              >
+                Logout
+              </button>
+              
+            </>
+          )}
+                      
         </div>
       </div>
     </nav>
