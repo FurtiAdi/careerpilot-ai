@@ -170,10 +170,8 @@ def register_user(
     )
 
     new_user = User(
-        first_name=user.first_name,
+        full_name=user.full_name,
 
-        last_name=user.last_name,
-        
         email=user.email,
 
         hashed_password=hashed_password

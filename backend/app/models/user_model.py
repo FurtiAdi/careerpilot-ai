@@ -18,9 +18,7 @@ class User(Base):
     )
 
     
-    first_name = Column(String)
-
-    last_name = Column(String)
+    full_name = Column(String)
 
     profile_picture = Column(String, nullable=True)
 
