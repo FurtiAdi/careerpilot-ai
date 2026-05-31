@@ -224,3 +224,17 @@ def login_user(
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+
+@router.get("/me")
+def get_current_user_profile(
+    current_user: User = Depends(
+        get_current_user
+    )
+):
+
+    return {
+        "id": current_user.id,
+        "full_name": current_user.full_name,
+        "email": current_user.email
+    }
