@@ -1,6 +1,8 @@
-from fastapi import APIRouter, UploadFile, File
 import tempfile
+import shutil
+import os
 
+from fastapi import APIRouter, UploadFile, File
 from app.services.resume_service import extract_text_from_pdf
 from app.models.job_models import JobRequest
 from app.services.ai_service import generate_ai_analysis
@@ -26,8 +28,6 @@ from app.services.auth_service import (
 from app.dependencies.auth_dependencies import (
     get_current_user
 )
-
-
 
 router = APIRouter()
 
@@ -238,3 +238,36 @@ def get_current_user_profile(
         "full_name": current_user.full_name,
         "email": current_user.email
     }
+
+
+@router.post("/upload-profile-picture")
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    upload_dir = "uploads/profile_pictures"
+
+    os.makedirs(
+        upload_dir,
+        exist_ok=True
+    )
+
+    file_path = f"{upload_dir}/{file.filename}"
+
+    with open(file_path, "wb") as buffer:
+
+        shutil.copyfileobj(
+            file.file,
+            buffer
+        )
+
+    current_user.profile_picture = file.filename
+
+    db.commit()
+
+    return {
+        "filename": file.filename
+    }
+
