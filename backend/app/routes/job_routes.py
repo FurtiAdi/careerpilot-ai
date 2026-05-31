@@ -15,7 +15,7 @@ from app.database.database import get_db
 from app.models.analysis_model import Analysis
 
 from app.models.user_model import User
-from app.models.user_schema import UserCreate
+from app.models.user_schema import UserCreate, UserLogin
 
 from app.services.auth_service import (
     hash_password,
@@ -189,7 +189,7 @@ def register_user(
 
 @router.post("/login")
 def login_user(
-    user: UserCreate,
+    user: UserLogin,
     db: Session = Depends(get_db)
 ):
 
