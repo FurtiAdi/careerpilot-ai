@@ -47,6 +47,28 @@ export default function Navbar() {
 
   }, [])
 
+  
+  useEffect(() => {
+
+      const checkAuth = async () => {
+
+          const token = localStorage.getItem(
+              "token"
+          )
+
+          setIsAuthenticated(!!token)
+
+          if (token) {
+
+              await fetchUserProfile()
+
+          }
+
+      }
+
+      checkAuth()
+
+  }, [])
 
   const logoutUser = () => {
     localStorage.removeItem("token")
