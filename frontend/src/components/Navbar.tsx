@@ -273,6 +273,10 @@ export default function Navbar() {
 
                       {/* Profile */}
                       <button
+                        onClick={() => {
+                          setOpenDropdown(false)
+                          router.push("/profile")
+                        }}
                         className="
                           w-full text-left
                           px-4 py-3 rounded-2xl
