@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -7,23 +7,86 @@ import { useRouter } from "next/navigation"
 
 export default function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-
+  const [user, setUser] = useState<any>(null)
+  const [openDropdown, setOpenDropdown] = useState(false)
   const router = useRouter()
+  const dropdownRef = useRef<HTMLDivElement | null >(null)
 
   useEffect(() => {
 
-      const token = localStorage.getItem("token")
+    const handleClickOutside = (
+      event: MouseEvent
+    ) => {
 
-      setIsAuthenticated(!!token)
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(
+          event.target as Node
+        )
+      ) {
 
-    }, [])
+        setOpenDropdown(false)
+
+      }
+
+    }
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
+    )
+
+    return () => {
+
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      )
+
+    }
+
+  }, [])
+
 
   const logoutUser = () => {
     localStorage.removeItem("token")
     setIsAuthenticated(false)
+    setUser(null)
+    setOpenDropdown(false)
     router.push("/login")
   }
+
   
+  const fetchUserProfile = async () => {
+
+    try {
+
+      const token = localStorage.getItem(
+        "token"
+      )
+
+      if (!token) return
+
+      const response = await fetch(
+        "http://127.0.0.1:8000/me",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
+      const data = await response.json()
+
+      setUser(data)
+
+    } catch (error) {
+
+      console.error(error)
+
+    }
+
+  }
 
   return (
 
@@ -94,30 +157,131 @@ export default function Navbar() {
                 Home
               </Link>
 
-              <Link
-                href="/history"
-                className="
-                  text-gray-300
-                  hover:text-white
-                  transition
-                "
-              >
-                History
-              </Link>
+          
+              <div className="flex items-center gap-4">
 
-              <button
-                onClick={logoutUser}
-                className="
-                  px-5 py-2 rounded-xl
-                  bg-red-500/10
-                  border border-red-500/20
-                  text-red-300
-                  hover:bg-red-500/20
-                  transition-all duration-300
-                "
-              >
-                Logout
-              </button>
+                <Link
+                  href="/history"
+                  className="
+                    px-5 py-2 rounded-xl
+                    border border-white/10
+                    hover:border-purple-500/40
+                    transition-all duration-300
+                  "
+                >
+                  History
+                </Link>
+
+                {/* User Dropdown */}
+                <div ref={dropdownRef} className="relative">
+
+                  <button
+                    onClick={() =>
+                      setOpenDropdown(!openDropdown)
+                    }
+                    className="
+                      flex items-center gap-3
+                      px-4 py-2 rounded-2xl
+                      bg-white/5
+                      border border-white/10
+                      hover:border-purple-500/30
+                      transition-all duration-300
+                    "
+                  >
+
+                    {/* Avatar */}
+                    <div
+                      className="
+                        w-10 h-10 rounded-full
+                        bg-gradient-to-r
+                        from-purple-500
+                        to-pink-500
+                        flex items-center justify-center
+                        font-semibold
+                      "
+                    >
+                      {user?.full_name?.charAt(0)}
+                    </div>
+
+                    {/* Name */}
+                    <p className="text-sm text-white">
+                      {user?.full_name
+                        ?.split(" ")
+                        .map((name: string) =>
+                          name.charAt(0)
+                        )
+                        .join("")
+                        .slice(0, 2)}
+                    </p>
+
+                  </button>
+
+                  {/* Dropdown */}
+                  {openDropdown && (
+
+                    <div
+                      className="
+                        absolute right-0 mt-4
+                        w-72
+                        bg-black/95 
+                        backdrop-blur-xl
+                        animate-in fade-in zoom-in-95 duration-200
+                        border border-white/10
+                        rounded-3xl
+                        p-5
+                        shadow-2xl
+                        z-50
+                      "
+                    >
+
+                      {/* User Info */}
+                      <div className="mb-4">
+
+                        <p className="font-semibold text-lg">
+                          {user?.full_name}
+                        </p>
+
+                        <p className="text-gray-400 text-sm mt-1">
+                          {user?.email}
+                        </p>
+
+                      </div>
+
+                      <div className="h-px bg-white/10 mb-4" />
+
+                      {/* Profile */}
+                      <button
+                        className="
+                          w-full text-left
+                          px-4 py-3 rounded-2xl
+                          hover:bg-white/5
+                          transition-all duration-300
+                        "
+                      >
+                        Profile
+                      </button>
+
+                      {/* Logout */}
+                      <button
+                        onClick={logoutUser}
+                        className="
+                          w-full text-left
+                          px-4 py-3 rounded-2xl
+                          text-red-300
+                          hover:bg-red-500/10
+                          transition-all duration-300
+                        "
+                      >
+                        Logout
+                      </button>
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              </div>
               
             </>
           )}
