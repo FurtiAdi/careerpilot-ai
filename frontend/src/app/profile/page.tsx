@@ -1,227 +1,413 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+
+type User = {
+    full_name: string
+    email: string
+    profile_picture?: string
+}
 
 export default function ProfilePage() {
 
-  const [user, setUser] = useState<any>(null)
+    const [user, setUser] = useState<User | null>(null)
+    const [loading, setLoading] = useState(true)
+    const router = useRouter()
 
-  useEffect(() => {
+    useEffect(() => {
 
-    fetchProfile()
+        const token = localStorage.getItem(
+            "token"
+        )
 
-  }, [])
-
-  const fetchProfile = async () => {
-
-    try {
-
-      const token = localStorage.getItem(
-        "token"
-      )
-
-      const response = await fetch(
-        "http://127.0.0.1:8000/me",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+        if (!token) {
+            router.push("/login")
+            return
         }
-      )
 
-      const data = await response.json()
+        fetchProfile()
 
-      setUser(data)
+        }, [router])
 
-    } catch (error) {
+    const fetchProfile = async () => {
 
-      console.error(error)
+        try {
+
+            const token = localStorage.getItem(
+                "token"
+            )
+
+            const response = await fetch(
+                "http://127.0.0.1:8000/me",
+                {
+                    headers: {
+                    Authorization: `Bearer ${token}`
+                    }
+                }
+            )
+
+            if (response.status === 401) {
+
+                localStorage.removeItem("token")
+
+                router.push("/login")
+
+                return
+            }
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch profile")
+            }
+
+            const data = await response.json()
+
+            setUser(data)
+            setLoading(false)
+        } catch (error) {
+
+            console.error(error)
+            setLoading(false)
+
+        }
 
     }
 
-  }
+    if (loading) {
 
-  return (
+        return (
 
-    <main className="min-h-screen bg-black text-white pt-32 px-6 pb-20 overflow-hidden">
+            <main className="min-h-screen bg-black flex items-center justify-center">
 
-      {/* Purple Glow */}
-      <div className="absolute top-32 left-10 w-72 h-72 bg-purple-600/20 blur-[120px] rounded-full" />
-
-      {/* Pink Glow */}
-      <div className="absolute bottom-20 right-10 w-72 h-72 bg-pink-600/20 blur-[120px] rounded-full" />
-
-      <div className="relative z-10 max-w-6xl mx-auto">
-
-        {/* Heading */}
-        <h1
-          className="
-            text-5xl font-bold mb-12
-            bg-gradient-to-r
-            from-purple-400
-            to-pink-500
-            text-transparent bg-clip-text
-          "
-        >
-          My Profile
-        </h1>
-
-        {/* Main Profile Card */}
-        <div
-          className="
-            bg-white/5
-            border border-white/10
-            rounded-[32px]
-            p-10
-            backdrop-blur-xl
-          "
-        >
-
-          <div className="flex flex-col lg:flex-row gap-10 items-start">
-
-            {/* LEFT SIDE */}
-            <div className="flex flex-col items-center">
-
-              {/* Avatar */}
-              <div
+            <div
                 className="
-                  w-40 h-40 rounded-full
-                  bg-gradient-to-r
-                  from-purple-500
-                  to-pink-500
-                  flex items-center justify-center
-                  text-5xl font-bold
-                  shadow-2xl shadow-pink-500/20
+                w-12 h-12
+                border-4
+                border-purple-500/20
+                border-t-purple-400
+                rounded-full
+                animate-spin
                 "
-              >
+            />
 
-                {user?.full_name
-                  ?.split(" ")
-                  .map((name: string) =>
-                    name.charAt(0)
-                  )
-                  .join("")
-                  .slice(0, 2)}
+            </main>
 
-              </div>
+        )
+    }
 
-              {/* Upload Button */}
-              <button
+    return (
+
+        <main className="min-h-screen bg-black text-white pt-28 px-6 pb-20 overflow-hidden relative">
+
+            {/* Glow Background */}
+            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-600/10 blur-[160px] rounded-full" />
+
+            <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-pink-600/10 blur-[160px] rounded-full" />
+
+            <div className="relative z-10 max-w-7xl mx-auto grid lg:grid-cols-[320px_1fr] gap-8">
+
+            {/* LEFT SIDEBAR */}
+            <div
                 className="
-                  mt-6 px-6 py-3 rounded-2xl
-                  bg-white/5
-                  border border-white/10
-                  hover:border-purple-500/40
-                  transition-all duration-300
+                h-fit sticky top-32
+                rounded-3xl
+                border border-white/10
+                bg-white/5
+                backdrop-blur-xl
+                p-6
                 "
-              >
-                Change Photo
-              </button>
+            >
+
+                {/* Avatar */}
+                <div className="flex flex-col items-center text-center">
+
+                <div
+                    className="
+                    w-32 h-32 rounded-full
+                    bg-gradient-to-r
+                    from-purple-500
+                    to-pink-500
+                    flex items-center justify-center
+                    text-4xl font-bold
+                    shadow-lg shadow-pink-500/20
+                    "
+                >
+
+                    {user?.full_name
+                    ?.split(" ")
+                    .map((name: string) =>
+                        name.charAt(0)
+                    )
+                    .join("")
+                    .slice(0, 2)}
+
+                </div>
+
+                <h1 className="text-2xl font-bold mt-5">
+                    {user?.full_name}
+                </h1>
+
+                <p className="text-gray-400 text-sm mt-2">
+                    {user?.email}
+                </p>
+
+                <button
+                    className="
+                    mt-6 w-full
+                    py-3 rounded-2xl
+                    bg-white/5
+                    border border-white/10
+                    hover:border-purple-500/40
+                    transition-all duration-300
+                    "
+                >
+                    Edit Profile
+                </button>
+
+                </div>
+
+                {/* Divider */}
+                <div className="h-px bg-white/10 my-8" />
+
+                {/* Stats */}
+                <div className="space-y-5">
+
+                <div className="flex items-center justify-between">
+
+                    <span className="text-gray-400">
+                    Analyses
+                    </span>
+
+                    <span className="font-semibold text-xl text-purple-300">
+                    12
+                    </span>
+
+                </div>
+
+                <div className="flex items-center justify-between">
+
+                    <span className="text-gray-400">
+                    Avg Match
+                    </span>
+
+                    <span className="font-semibold text-xl text-pink-300">
+                    82%
+                    </span>
+
+                </div>
+
+                <div className="flex items-center justify-between">
+
+                    <span className="text-gray-400">
+                    Resume
+                    </span>
+
+                    <span className="font-semibold text-green-400">
+                    Uploaded
+                    </span>
+
+                </div>
+
+                </div>
 
             </div>
 
-            {/* RIGHT SIDE */}
-            <div className="flex-1 w-full">
+            {/* RIGHT CONTENT */}
+            <div className="space-y-8">
 
-              {/* Name */}
-              <div className="mb-8">
+                {/* Hero Card */}
+                <div
+                className="
+                    rounded-3xl
+                    border border-white/10
+                    bg-gradient-to-br
+                    from-purple-500/10
+                    to-pink-500/10
+                    backdrop-blur-xl
+                    p-8
+                "
+                >
 
-                <p className="text-sm text-gray-500 mb-2">
-                  Full Name
+                <p className="text-purple-300 text-sm mb-3 uppercase tracking-widest">
+                    CareerPilot AI
                 </p>
 
-                <h2 className="text-4xl font-bold">
-                  {user?.full_name}
+                <h2 className="text-5xl font-bold leading-tight max-w-3xl">
+                    Welcome back,
+                    <br />
+                    {user?.full_name}
                 </h2>
 
-              </div>
-
-              {/* Email */}
-              <div className="mb-8">
-
-                <p className="text-sm text-gray-500 mb-2">
-                  Email Address
+                <p className="text-gray-400 mt-6 max-w-2xl leading-8">
+                    Track your AI job analyses, optimize your resume,
+                    and improve your interview performance using
+                    intelligent career insights.
                 </p>
 
-                <p className="text-xl text-gray-300">
-                  {user?.email}
-                </p>
+                </div>
 
-              </div>
+                {/* Dashboard Cards */}
+                <div className="grid md:grid-cols-3 gap-6">
 
-              {/* Stats */}
-              <div className="grid md:grid-cols-3 gap-6">
-
-                {/* Analyses */}
                 <div
-                  className="
-                    bg-black/30
-                    border border-white/10
+                    className="
                     rounded-3xl
+                    border border-white/10
+                    bg-white/5
                     p-6
-                  "
+                    hover:border-purple-500/30
+                    transition-all duration-300
+                    "
                 >
 
-                  <p className="text-gray-500 mb-3">
-                    Analyses
-                  </p>
+                    <p className="text-gray-400 mb-4">
+                    Resume Strength
+                    </p>
 
-                  <h3 className="text-4xl font-bold text-purple-300">
-                    12
-                  </h3>
+                    <h3 className="text-4xl font-bold text-purple-300">
+                    Strong
+                    </h3>
 
                 </div>
 
-                {/* Match Rate */}
                 <div
-                  className="
-                    bg-black/30
-                    border border-white/10
+                    className="
                     rounded-3xl
+                    border border-white/10
+                    bg-white/5
                     p-6
-                  "
+                    hover:border-pink-500/30
+                    transition-all duration-300
+                    "
                 >
 
-                  <p className="text-gray-500 mb-3">
-                    Avg Match
-                  </p>
+                    <p className="text-gray-400 mb-4">
+                    Interviews
+                    </p>
 
-                  <h3 className="text-4xl font-bold text-pink-300">
-                    82%
-                  </h3>
+                    <h3 className="text-4xl font-bold text-pink-300">
+                    4
+                    </h3>
 
                 </div>
 
-                {/* Resume */}
                 <div
-                  className="
-                    bg-black/30
-                    border border-white/10
+                    className="
                     rounded-3xl
+                    border border-white/10
+                    bg-white/5
                     p-6
-                  "
+                    hover:border-green-500/30
+                    transition-all duration-300
+                    "
                 >
 
-                  <p className="text-gray-500 mb-3">
-                    Resume
-                  </p>
+                    <p className="text-gray-400 mb-4">
+                    Applications
+                    </p>
 
-                  <h3 className="text-xl font-semibold text-green-300">
-                    Uploaded
-                  </h3>
+                    <h3 className="text-4xl font-bold text-green-400">
+                    18
+                    </h3>
 
                 </div>
 
-              </div>
+                </div>
+
+                {/* Activity Section */}
+                <div
+                className="
+                    rounded-3xl
+                    border border-white/10
+                    bg-white/5
+                    backdrop-blur-xl
+                    p-8
+                "
+                >
+
+                <div className="flex items-center justify-between mb-8">
+
+                    <h2 className="text-2xl font-semibold">
+                    Recent Activity
+                    </h2>
+
+                    <button
+                    className="
+                        px-5 py-2 rounded-xl
+                        bg-white/5
+                        border border-white/10
+                        hover:border-purple-500/30
+                    "
+                    >
+                    View All
+                    </button>
+
+                </div>
+
+                <div className="space-y-5">
+
+                    <div
+                    className="
+                        flex items-center justify-between
+                        p-5 rounded-2xl
+                        bg-black/30
+                        border border-white/5
+                    "
+                    >
+
+                    <div>
+
+                        <h3 className="font-semibold text-lg">
+                        Frontend Developer Analysis
+                        </h3>
+
+                        <p className="text-gray-400 text-sm mt-1">
+                        Resume matched successfully
+                        </p>
+
+                    </div>
+
+                    <div className="text-green-400 font-bold text-xl">
+                        91%
+                    </div>
+
+                    </div>
+
+                    <div
+                    className="
+                        flex items-center justify-between
+                        p-5 rounded-2xl
+                        bg-black/30
+                        border border-white/5
+                    "
+                    >
+
+                    <div>
+
+                        <h3 className="font-semibold text-lg">
+                        Backend Engineer Analysis
+                        </h3>
+
+                        <p className="text-gray-400 text-sm mt-1">
+                        AI generated recommendations
+                        </p>
+
+                    </div>
+
+                    <div className="text-purple-300 font-bold text-xl">
+                        78%
+                    </div>
+
+                    </div>
+
+                </div>
+
+                </div>
 
             </div>
 
-          </div>
+            </div>
 
-        </div>
-
-      </div>
-
-    </main>
-  )
+        </main>
+    )
 }
