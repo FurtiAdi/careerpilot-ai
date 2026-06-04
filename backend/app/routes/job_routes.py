@@ -271,3 +271,33 @@ async def upload_profile_picture(
         "filename": file.filename
     }
 
+@router.get("/profile-stats")
+def get_profile_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    analyses = db.query(Analysis).filter(
+        Analysis.user_id == current_user.id
+    ).all()
+
+    total_analyses = len(analyses)
+
+    average_score = 0
+
+    if total_analyses > 0:
+
+        average_score = round(
+            sum(
+                analysis.match_score
+                for analysis in analyses
+            ) / total_analyses
+        )
+
+    return {
+        "total_analyses": total_analyses,
+        "average_match_score": average_score,
+        "resume_uploaded": bool(
+            current_user.resume_filename
+        )
+    }
