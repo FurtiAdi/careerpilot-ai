@@ -13,6 +13,12 @@ export default function ProfilePage() {
 
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
+    const [stats, setStats] = useState({
+        total_analyses: 0,
+        average_match_score: 0,
+        resume_uploaded: false
+    })
+    const [recentAnalyses, setRecentAnalyses] = useState<any[]>([])
     const router = useRouter()
 
     useEffect(() => {
@@ -27,6 +33,8 @@ export default function ProfilePage() {
         }
 
         fetchProfile()
+        fetchProfileStats()
+        fetchRecentAnalyses()
 
         }, [router])
 
@@ -72,6 +80,66 @@ export default function ProfilePage() {
         }
 
     }
+
+    const fetchProfileStats = async () => {
+
+        try {
+
+            const token = localStorage.getItem(
+                "token"
+            )
+
+            const response = await fetch(
+                "http://127.0.0.1:8000/profile-stats",
+                {
+                    headers: {
+                    Authorization: `Bearer ${token}`
+                    }
+                }
+            )
+
+            const data = await response.json()
+
+            setStats(data)
+
+        } catch (error) {
+
+            console.error(error)
+
+        }
+
+    }
+
+    const fetchRecentAnalyses = async () => {
+
+        try {
+
+            const token = localStorage.getItem(
+            "token"
+            )
+
+            const response = await fetch(
+                "http://127.0.0.1:8000/analyses",
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            )
+
+            const data = await response.json()
+
+            setRecentAnalyses(
+                data.slice(0, 3)
+            )
+
+        } catch (error) {
+
+            console.error(error)
+
+        }
+
+        }
 
     if (loading) {
 
@@ -179,7 +247,7 @@ export default function ProfilePage() {
                     </span>
 
                     <span className="font-semibold text-xl text-purple-300">
-                    12
+                    {stats.total_analyses}
                     </span>
 
                 </div>
@@ -191,7 +259,7 @@ export default function ProfilePage() {
                     </span>
 
                     <span className="font-semibold text-xl text-pink-300">
-                    82%
+                    {stats.average_match_score}%
                     </span>
 
                 </div>
@@ -203,7 +271,7 @@ export default function ProfilePage() {
                     </span>
 
                     <span className="font-semibold text-green-400">
-                    Uploaded
+                    {stats.resume_uploaded ? "Uploaded" : "Not resume"}
                     </span>
 
                 </div>
@@ -346,67 +414,54 @@ export default function ProfilePage() {
 
                 <div className="space-y-5">
 
-                    <div
-                    className="
-                        flex items-center justify-between
-                        p-5 rounded-2xl
-                        bg-black/30
-                        border border-white/5
-                    "
-                    >
+                    {recentAnalyses.map((analysis) => (
 
-                    <div>
+                        <div
+                            key={analysis.id}
+                            className="
+                                flex items-center justify-between
+                                p-5 rounded-2xl
+                                bg-black/30
+                                border border-white/5
+                            "
+                            >
 
-                        <h3 className="font-semibold text-lg">
-                        Frontend Developer Analysis
-                        </h3>
+                            <div>
 
-                        <p className="text-gray-400 text-sm mt-1">
-                        Resume matched successfully
-                        </p>
+                                <h3 className="font-semibold text-lg">
+                                Analysis #{analysis.id}
+                                </h3>
 
-                    </div>
+                                <p className="text-gray-400 text-sm mt-1">
+                                {analysis.candidate_skills}
+                                </p>
 
-                    <div className="text-green-400 font-bold text-xl">
-                        91%
-                    </div>
+                            </div>
 
-                    </div>
+                            <div
+                                className={`
+                                    ${
+                                    analysis.match_score >= 90
+                                        ? "text-green-400"
+                                        : "text-purple-300"
+                                    }
+                                    font-bold text-xl
+                                `}
+                                >
+                                {analysis.match_score}%
+                            </div>
 
-                    <div
-                    className="
-                        flex items-center justify-between
-                        p-5 rounded-2xl
-                        bg-black/30
-                        border border-white/5
-                    "
-                    >
+                        </div>
 
-                    <div>
-
-                        <h3 className="font-semibold text-lg">
-                        Backend Engineer Analysis
-                        </h3>
-
-                        <p className="text-gray-400 text-sm mt-1">
-                        AI generated recommendations
-                        </p>
-
-                    </div>
-
-                    <div className="text-purple-300 font-bold text-xl">
-                        78%
-                    </div>
-
-                    </div>
-
-                </div>
+                    ))}
 
                 </div>
 
             </div>
 
-            </div>
+        </div>
+
+    </div>
 
         </main>
     )
