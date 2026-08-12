@@ -1,5 +1,5 @@
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 
 export async function apiRequest<T>(
   endpoint: string,
@@ -10,20 +10,39 @@ export async function apiRequest<T>(
     headers: {
       ...options.headers,
     },
-  });
+  })
 
   if (!response.ok) {
-    let message = "Something went wrong";
+    let message = "Something went wrong"
 
     try {
-      const error = await response.json();
-      message = error.detail || error.error || message;
+      const error = await response.json()
+      message = error.detail || error.error || message
     } catch {
       // Response was not JSON
     }
 
-    throw new Error(message);
+    throw new Error(message)
   }
 
-  return response.json();
+  return response.json()
+}
+
+export async function authenticatedApiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = localStorage.getItem("token")
+
+  if (!token) {
+    throw new Error("Not authenticated")
+  }
+
+  return apiRequest<T>(endpoint, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  })
 }

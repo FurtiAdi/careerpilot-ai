@@ -3,11 +3,12 @@ import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getCurrentUser, User } from "@/services/userService"
 
 
 export default function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [openDropdown, setOpenDropdown] = useState(false)
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement | null >(null)
@@ -49,25 +50,17 @@ export default function Navbar() {
 
   
   useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token")
 
-      const checkAuth = async () => {
+      setIsAuthenticated(!!token)
 
-          const token = localStorage.getItem(
-              "token"
-          )
-
-          setIsAuthenticated(!!token)
-
-          if (token) {
-
-              await fetchUserProfile()
-
-          }
-
+      if (token) {
+        await fetchUserProfile()
       }
+    }
 
-      checkAuth()
-
+    checkAuth()
   }, [])
 
   const logoutUser = () => {
@@ -80,34 +73,17 @@ export default function Navbar() {
 
   
   const fetchUserProfile = async () => {
-
     try {
+      const userData = await getCurrentUser()
 
-      const token = localStorage.getItem(
-        "token"
-      )
-
-      if (!token) return
-
-      const response = await fetch(
-        "http://127.0.0.1:8000/me",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
-
-      const data = await response.json()
-
-      setUser(data)
-
+      setUser(userData)
     } catch (error) {
-
       console.error(error)
 
+      localStorage.removeItem("token")
+      setIsAuthenticated(false)
+      setUser(null)
     }
-
   }
 
   return (
