@@ -1,68 +1,43 @@
 "use client"
 
+"use client"
+
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/dist/client/link"
+import Link from "next/link"
+import { login } from "@/services/authService"
 
 export default function LoginPage() {
 
-    const [email, setEmail] = useState("")
+  const [email, setEmail] = useState("")
 
-    const [password, setPassword] = useState("")
+  const [password, setPassword] = useState("")
 
-    const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-    const router = useRouter()
-
-    const loginUser = async () => {
-
+  const loginUser = async () => {
     try {
-
       setLoading(true)
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/login",
-        {
-          method: "POST",
+      const data = await login({
+        email,
+        password,
+      })
 
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            email,
-            password
-          })
-        }
+      localStorage.setItem(
+        "token",
+        data.access_token
       )
 
-      const data = await response.json()
-
-      if (data.access_token) {
-
-        localStorage.setItem(
-          "token",
-          data.access_token
-        )
-
-        window.location.href = "/"
-
-      } else {
-
-        alert(data.error)
-
-      }
-
+      window.location.href = "/"
     } catch (error) {
-
       console.error(error)
 
+      if (error instanceof Error) {
+        alert(error.message)
+      }
     } finally {
-
       setLoading(false)
-
     }
-
   }
 
   return (
