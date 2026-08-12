@@ -2,16 +2,17 @@ import tempfile
 import shutil
 import os
 
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Form, Depends
 from app.services.resume_service import extract_text_from_pdf
 from app.models.job_models import JobRequest
 from app.services.ai_service import generate_ai_analysis
+from uuid import uuid4
 
 from app.services.job_service import (
     extract_skills,
     calculate_match_score
 )
-from fastapi import Depends
+
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.analysis_model import Analysis
@@ -149,14 +150,26 @@ def delete_analysis(
         "message": "Analysis deleted"
     }
 
+# User Registration Routes
 @router.post("/register")
 def register_user(
-    user: UserCreate,
+
+    full_name: str = Form(...),
+
+    email: str = Form(...),
+
+    password: str = Form(...),
+
+    resume: UploadFile = File(None),
+
+    profile_picture: UploadFile = File(None),
+
     db: Session = Depends(get_db)
-):
+
+    ):
 
     existing_user = db.query(User).filter(
-        User.email == user.email
+        User.email == email
     ).first()
 
     if existing_user:
@@ -165,16 +178,50 @@ def register_user(
             "error": "Email already exists"
         }
 
-    hashed_password = hash_password(
-        user.password
-    )
+    hashed_password = hash_password(password)
+
+    resume_filename = None
+
+    profile_picture_filename = None
+
+    if resume:
+
+        resume_filename = resume.filename
+
+        with open(
+            f"uploads/resumes/{resume_filename}",
+            "wb"
+        ) as buffer:
+
+            shutil.copyfileobj(
+                resume.file,
+                buffer
+            )
+    if profile_picture:
+
+        profile_picture_filename = profile_picture.filename
+
+        with open(
+            f"uploads/profile_pictures/{profile_picture_filename}",
+            "wb"
+        ) as buffer:
+
+            shutil.copyfileobj(
+                profile_picture.file,
+                buffer
+            )
 
     new_user = User(
-        full_name=user.full_name,
 
-        email=user.email,
+        full_name=full_name,
 
-        hashed_password=hashed_password
+        email=email,
+
+        hashed_password=hashed_password,
+
+        resume_filename=resume_filename,
+
+        profile_picture_filename=profile_picture_filename
     )
 
     db.add(new_user)
@@ -186,6 +233,7 @@ def register_user(
     return {
         "message": "User registered successfully"
     }
+
 
 @router.post("/login")
 def login_user(
@@ -236,7 +284,9 @@ def get_current_user_profile(
     return {
         "id": current_user.id,
         "full_name": current_user.full_name,
-        "email": current_user.email
+        "email": current_user.email,
+        "resume_filename": current_user.resume_filename,
+        "profile_picture_filename": current_user.profile_picture_filename
     }
 
 
@@ -254,7 +304,17 @@ async def upload_profile_picture(
         exist_ok=True
     )
 
-    file_path = f"{upload_dir}/{file.filename}"
+    file_extension = (
+        file.filename.split(".")[-1]
+    )
+
+    unique_filename = (
+        f"{uuid4()}.{file_extension}"
+    )
+
+    file_path = (
+        f"{upload_dir}/{unique_filename}"
+    )
 
     with open(file_path, "wb") as buffer:
 
@@ -263,12 +323,15 @@ async def upload_profile_picture(
             buffer
         )
 
-    current_user.profile_picture = file.filename
+    current_user.profile_picture_filename = (
+        unique_filename
+    )
 
     db.commit()
 
     return {
-        "filename": file.filename
+        "profile_picture_filename":
+        unique_filename
     }
 
 @router.get("/profile-stats")

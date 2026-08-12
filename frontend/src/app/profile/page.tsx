@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation"
 type User = {
     full_name: string
     email: string
-    profile_picture?: string
+    profile_picture_filename?: string
+}
+
+type Analysis = {
+    id: number
+    candidate_skills: string
+    match_score: number
 }
 
 export default function ProfilePage() {
@@ -18,7 +24,7 @@ export default function ProfilePage() {
         average_match_score: 0,
         resume_uploaded: false
     })
-    const [recentAnalyses, setRecentAnalyses] = useState<any[]>([])
+    const [recentAnalyses, setRecentAnalyses] = useState<Analysis[]>([])
     const router = useRouter()
 
     useEffect(() => {
@@ -32,11 +38,15 @@ export default function ProfilePage() {
             return
         }
 
-        fetchProfile()
-        fetchProfileStats()
-        fetchRecentAnalyses()
+        Promise.all([
+            fetchProfile(),
+            fetchProfileStats(),
+            fetchRecentAnalyses()
+        ]).finally(() => {
+            setLoading(false)
+        })
 
-        }, [router])
+        }, [])
 
     const fetchProfile = async () => {
 
@@ -71,12 +81,8 @@ export default function ProfilePage() {
             const data = await response.json()
 
             setUser(data)
-            setLoading(false)
         } catch (error) {
-
             console.error(error)
-            setLoading(false)
-
         }
 
     }
@@ -139,7 +145,48 @@ export default function ProfilePage() {
 
         }
 
+    }
+
+    const uploadProfilePicture = async (
+        file: File
+        ) => {
+
+        try {
+
+            const token = localStorage.getItem(
+                "token"
+            )
+
+            const formData = new FormData()
+
+            formData.append("file", file)
+
+            const response = await fetch(
+                "http://127.0.0.1:8000/upload-profile-picture",
+                {
+                    method: "POST",
+                    headers: {
+                    Authorization: `Bearer ${token}`
+                    },
+                    body: formData
+                }
+            )
+
+            const data = await response.json()
+
+            setUser((prev: any) => ({
+                ...prev,
+                profile_picture_filename:
+                    data.profile_picture_filename
+            }))
+
+        } catch (error) {
+
+            console.error(error)
+
         }
+
+    }
 
     if (loading) {
 
@@ -165,14 +212,14 @@ export default function ProfilePage() {
 
     return (
 
-        <main className="min-h-screen bg-black text-white pt-28 px-6 pb-20 overflow-hidden relative">
+        <main className="min-h-screen bg-black text-white pt-36 px-6 pb-20 overflow-hidden relative">
 
             {/* Glow Background */}
             <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-600/10 blur-[160px] rounded-full" />
 
             <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-pink-600/10 blur-[160px] rounded-full" />
 
-            <div className="relative z-10 max-w-7xl mx-auto grid lg:grid-cols-[320px_1fr] gap-8">
+            <div className="relative z-10 max-w-5xl mx-auto grid lg:grid-cols-[320px_1fr] gap-8">
 
             {/* LEFT SIDEBAR */}
             <div
@@ -189,48 +236,89 @@ export default function ProfilePage() {
                 {/* Avatar */}
                 <div className="flex flex-col items-center text-center">
 
-                <div
-                    className="
-                    w-32 h-32 rounded-full
-                    bg-gradient-to-r
-                    from-purple-500
-                    to-pink-500
-                    flex items-center justify-center
-                    text-4xl font-bold
-                    shadow-lg shadow-pink-500/20
-                    "
-                >
+                    <label className="cursor-pointer">
 
-                    {user?.full_name
-                    ?.split(" ")
-                    .map((name: string) =>
-                        name.charAt(0)
-                    )
-                    .join("")
-                    .slice(0, 2)}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
 
-                </div>
+                                const file = e.target.files?.[0]
 
-                <h1 className="text-2xl font-bold mt-5">
-                    {user?.full_name}
-                </h1>
+                                if (file) {
 
-                <p className="text-gray-400 text-sm mt-2">
-                    {user?.email}
-                </p>
+                                    uploadProfilePicture(file)
 
-                <button
-                    className="
-                    mt-6 w-full
-                    py-3 rounded-2xl
-                    bg-white/5
-                    border border-white/10
-                    hover:border-purple-500/40
-                    transition-all duration-300
-                    "
-                >
-                    Edit Profile
-                </button>
+                                }
+
+                            }}
+                        />
+
+                        <div
+                            className="
+                            w-32 h-32 rounded-full
+                            bg-gradient-to-r
+                            from-purple-500
+                            to-pink-500
+                            flex items-center justify-center
+                            text-4xl font-bold
+                            shadow-lg shadow-pink-500/20
+                            overflow-hidden
+                            "
+                        >
+
+                            {user?.profile_picture_filename ? (
+
+                                <img
+                                    src={`http://127.0.0.1:8000/uploads/profile_pictures/${user.profile_picture_filename}`}
+                                    alt="Profile"
+                                    className="
+                                        w-full h-full
+                                        object-cover
+                                    "
+                                />
+
+                            ) : (
+
+                                <span>
+
+                                    {user?.full_name
+                                    ?.split(" ")
+                                    .map((name: string) =>
+                                        name.charAt(0)
+                                    )
+                                    .join("")
+                                    .slice(0, 2)}
+
+                                </span>
+
+                            )}
+
+                        </div>
+
+                    </label>
+
+                    <h1 className="text-2xl font-bold mt-5">
+                        {user?.full_name}
+                    </h1>
+
+                    <p className="text-gray-400 text-sm mt-2">
+                        {user?.email}
+                    </p>
+
+                    <button
+                        className="
+                        mt-6 w-full
+                        py-3 rounded-2xl
+                        bg-white/5
+                        border border-white/10
+                        hover:border-purple-500/40
+                        transition-all duration-300
+                        "
+                    >
+                        Edit Profile
+                    </button>
 
                 </div>
 
@@ -271,7 +359,7 @@ export default function ProfilePage() {
                     </span>
 
                     <span className="font-semibold text-green-400">
-                    {stats.resume_uploaded ? "Uploaded" : "Not resume"}
+                    {stats.resume_uploaded ? "Uploaded" : "Not uploaded"}
                     </span>
 
                 </div>
@@ -433,7 +521,7 @@ export default function ProfilePage() {
                                 </h3>
 
                                 <p className="text-gray-400 text-sm mt-1">
-                                {analysis.candidate_skills}
+                                    {analysis.candidate_skills?.slice(0, 80)}...
                                 </p>
 
                             </div>

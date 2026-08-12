@@ -49,23 +49,34 @@ export default function RegisterPage() {
 
       setLoading(true)
 
+      const formData = new FormData()
+
+      formData.append("full_name", fullName)
+
+      formData.append("email", email)
+
+      formData.append("password", password)
+
+      if (resumeFile) {
+        formData.append(
+          "resume",
+          resumeFile
+        )
+      }
+
+      if (profileImage) {
+        formData.append(
+          "profile_picture",
+          profileImage
+        )
+      }
+
       const response = await fetch(
         "http://127.0.0.1:8000/register",
         {
           method: "POST",
 
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-
-            full_name: fullName,
-
-            email,
-
-            password
-          })
+          body: formData
         }
       )
 
