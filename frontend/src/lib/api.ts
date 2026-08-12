@@ -25,7 +25,20 @@ export async function apiRequest<T>(
     throw new Error(message)
   }
 
-  return response.json()
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  const contentType = response.headers.get("content-type")
+
+  if (
+    contentType &&
+    contentType.includes("application/json")
+  ) {
+    return response.json()
+  }
+
+  return undefined as T
 }
 
 export async function authenticatedApiRequest<T>(
