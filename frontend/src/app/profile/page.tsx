@@ -3,26 +3,29 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
-type User = {
-    full_name: string
-    email: string
-    profile_picture_filename?: string
-}
+import { User } from "@/services/userService"
 
-type Analysis = {
-    id: number
-    candidate_skills: string
-    match_score: number
-}
+import {
+  Analysis,
+} from "@/services/analysisService"
+
+import {
+  ProfileStats,
+  getProfile,
+  getProfileStats,
+  getRecentAnalyses,
+  uploadProfilePicture,
+} from "@/services/profileService"
 
 export default function ProfilePage() {
 
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
-    const [stats, setStats] = useState({
-        total_analyses: 0,
-        average_match_score: 0,
-        resume_uploaded: false
+    const [stats, setStats] =
+        useState<ProfileStats>({
+            total_analyses: 0,
+            average_match_score: 0,
+            resume_uploaded: false
     })
     const [recentAnalyses, setRecentAnalyses] = useState<Analysis[]>([])
     const router = useRouter()
@@ -49,143 +52,60 @@ export default function ProfilePage() {
         }, [])
 
     const fetchProfile = async () => {
-
         try {
-
-            const token = localStorage.getItem(
-                "token"
-            )
-
-            const response = await fetch(
-                "http://127.0.0.1:8000/me",
-                {
-                    headers: {
-                    Authorization: `Bearer ${token}`
-                    }
-                }
-            )
-
-            if (response.status === 401) {
-
-                localStorage.removeItem("token")
-
-                router.push("/login")
-
-                return
-            }
-
-            if (!response.ok) {
-                throw new Error("Failed to fetch profile")
-            }
-
-            const data = await response.json()
+            const data = await getProfile()
 
             setUser(data)
         } catch (error) {
             console.error(error)
-        }
 
+            localStorage.removeItem("token")
+
+            router.push("/login")
+        }
     }
 
     const fetchProfileStats = async () => {
-
         try {
-
-            const token = localStorage.getItem(
-                "token"
-            )
-
-            const response = await fetch(
-                "http://127.0.0.1:8000/profile-stats",
-                {
-                    headers: {
-                    Authorization: `Bearer ${token}`
-                    }
-                }
-            )
-
-            const data = await response.json()
+            const data = await getProfileStats()
 
             setStats(data)
-
         } catch (error) {
-
             console.error(error)
-
         }
-
     }
 
     const fetchRecentAnalyses = async () => {
-
         try {
-
-            const token = localStorage.getItem(
-            "token"
-            )
-
-            const response = await fetch(
-                "http://127.0.0.1:8000/analyses",
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            )
-
-            const data = await response.json()
+            const analyses =
+            await getRecentAnalyses()
 
             setRecentAnalyses(
-                data.slice(0, 3)
+            analyses.slice(0, 3)
             )
-
         } catch (error) {
-
             console.error(error)
-
         }
-
     }
 
-    const uploadProfilePicture = async (
-        file: File
-        ) => {
-
+    const uploadProfilePictureHandler =
+        async (file: File) => {
         try {
+            const data =
+            await uploadProfilePicture(file)
 
-            const token = localStorage.getItem(
-                "token"
+            setUser((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        profile_picture_filename:
+                        data.profile_picture_filename,
+                    }
+                    : prev
             )
-
-            const formData = new FormData()
-
-            formData.append("file", file)
-
-            const response = await fetch(
-                "http://127.0.0.1:8000/upload-profile-picture",
-                {
-                    method: "POST",
-                    headers: {
-                    Authorization: `Bearer ${token}`
-                    },
-                    body: formData
-                }
-            )
-
-            const data = await response.json()
-
-            setUser((prev: any) => ({
-                ...prev,
-                profile_picture_filename:
-                    data.profile_picture_filename
-            }))
-
         } catch (error) {
-
             console.error(error)
-
         }
-
     }
 
     if (loading) {
@@ -248,7 +168,7 @@ export default function ProfilePage() {
 
                                 if (file) {
 
-                                    uploadProfilePicture(file)
+                                    uploadProfilePictureHandler(file)
 
                                 }
 

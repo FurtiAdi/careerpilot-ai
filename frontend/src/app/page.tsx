@@ -1,6 +1,10 @@
 "use client"
 
 import { useState, useRef } from "react"
+import {
+  analyzeJobRequest,
+  uploadResumeFile
+} from "@/services/analysisService"
 
 export default function Home() {
 
@@ -62,28 +66,10 @@ export default function Home() {
         .map((skill) => skill.trim())
 
       // Send POST request to backend
-      const response = await fetch(
-        "http://127.0.0.1:8000/analyze-job",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${
-              localStorage.getItem("token")
-            }`
-          },
-
-          // Send job description and skills
-          body: JSON.stringify({
-            job_description: jobDescription,
-            candidate_skills: skillsArray
-          })
-        }
-      )
-
-      // Convert backend response to JSON
-      const data = await response.json()
+      const data = await analyzeJobRequest({
+        job_description: jobDescription,
+        candidate_skills: skillsArray
+      })
 
       // Debugging log
       console.log(data)
@@ -131,25 +117,9 @@ export default function Home() {
     // Save uploaded file
     setResumeFile(file)
 
-    // Create form data object
-    const formData = new FormData()
-
-    // Append uploaded PDF file
-    formData.append("file", file)
-
     try {
 
-      // Send uploaded file to backend
-      const response = await fetch(
-        "http://127.0.0.1:8000/upload-resume",
-        {
-          method: "POST",
-          body: formData
-        }
-      )
-
-      // Convert backend response to JSON
-      const data = await response.json()
+      const data = await uploadResumeFile(file)
 
       // Save extracted resume text
       setResumeText(data.extracted_text)
