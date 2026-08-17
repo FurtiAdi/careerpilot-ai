@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.job_routes import router as job_router
 from app.routes.analysis_routes import router as analysis_router
+from app.routes.auth_routes import router as auth_router
 from app.models.user_model import User
 from fastapi.staticfiles import StaticFiles
 
@@ -42,3 +43,4 @@ def home():
 
 app.include_router(job_router)
 app.include_router(analysis_router)
+app.include_router(auth_router)
