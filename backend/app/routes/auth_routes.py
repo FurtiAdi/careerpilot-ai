@@ -1,4 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends
+from fastapi import (
+    APIRouter,
+    UploadFile,
+    File,
+    Form,
+    Depends,
+    HTTPException
+)
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -63,9 +70,10 @@ def login_user(
 
     if not access_token:
 
-        return {
-            "error": "Invalid email or password"
-        }
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
 
     return {
         "access_token": access_token,
