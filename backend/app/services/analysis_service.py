@@ -57,3 +57,33 @@ def analyze_job_for_user(
         "match_analysis": score_results,
         "ai_analysis": ai_analysis
     }
+
+def get_user_analyses(
+    user_id: int,
+    db: Session
+):
+
+    return db.query(Analysis).filter(
+        Analysis.user_id == user_id
+    ).all()
+
+
+def delete_user_analysis(
+    analysis_id: int,
+    user_id: int,
+    db: Session
+):
+
+    analysis = db.query(Analysis).filter(
+        Analysis.id == analysis_id,
+        Analysis.user_id == user_id
+    ).first()
+
+    if not analysis:
+        return None
+
+    db.delete(analysis)
+
+    db.commit()
+
+    return analysis
