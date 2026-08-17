@@ -9,6 +9,41 @@ from app.services.auth_service import (
     hash_password
 )
 
+from app.services.auth_service import (
+    hash_password,
+    verify_password,
+    create_access_token
+)
+
+
+def authenticate_user(
+    email: str,
+    password: str,
+    db: Session
+):
+
+    user = db.query(User).filter(
+        User.email == email
+    ).first()
+
+    if not user:
+        return None
+
+    valid_password = verify_password(
+        password,
+        user.hashed_password
+    )
+
+    if not valid_password:
+        return None
+
+    access_token = create_access_token(
+        data={
+            "sub": user.email
+        }
+    )
+
+    return access_token
 
 def register_user(
     full_name: str,

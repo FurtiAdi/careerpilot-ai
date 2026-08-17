@@ -2,17 +2,11 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
-
-from app.models.user_model import User
 from app.models.user_schema import UserLogin
 
-from app.services.auth_service import (
-    verify_password,
-    create_access_token
-)
-
 from app.services.user_service import (
-    register_user
+    register_user,
+    authenticate_user
 )
 
 router = APIRouter()
@@ -54,38 +48,24 @@ def register_user_route(
         "message": "User registered successfully"
     }
 
+
 @router.post("/login")
 def login_user(
     user: UserLogin,
     db: Session = Depends(get_db)
 ):
 
-    existing_user = db.query(User).filter(
-        User.email == user.email
-    ).first()
+    access_token = authenticate_user(
+        email=user.email,
+        password=user.password,
+        db=db
+    )
 
-    if not existing_user:
+    if not access_token:
 
         return {
             "error": "Invalid email or password"
         }
-
-    valid_password = verify_password(
-        user.password,
-        existing_user.hashed_password
-    )
-
-    if not valid_password:
-
-        return {
-            "error": "Invalid email or password"
-        }
-
-    access_token = create_access_token(
-        data={
-            "sub": existing_user.email
-        }
-    )
 
     return {
         "access_token": access_token,
