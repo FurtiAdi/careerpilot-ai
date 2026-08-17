@@ -3,14 +3,11 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
-type Analysis = {
-  id: number
-  job_description: string
-  candidate_skills: string
-  match_score: number
-  ai_summary: string
-  created_at: string
-}
+import {
+  Analysis,
+  getAnalyses,
+  deleteAnalysisById,
+} from "@/services/analysisService"
 
 export default function HistoryPage() {
 
@@ -19,81 +16,36 @@ export default function HistoryPage() {
   const router = useRouter()
 
   useEffect(() => {
-
     const token = localStorage.getItem(
       "token"
     )
-
     if (!token) {
-
       router.push("/login")
-
       return
     }
-
     fetchAnalyses()
-
   }, [])
 
   const fetchAnalyses = async () => {
-
     try {
-
-      const token = localStorage.getItem(
-        "token"
-      )
-
-      const response = await fetch(
-        "http://127.0.0.1:8000/analyses",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
-      
-      if (response.status === 401) {
-
-        localStorage.removeItem("token")
-
-        router.push("/login")
-
-        return
-      }
-
-      const data = await response.json()
+      const data = await getAnalyses()
 
       setAnalyses(data)
-      setLoading(false)
-
     } catch (error) {
-
       console.error(error)
-      setLoading(false)
 
+      localStorage.removeItem("token")
+      router.push("/login")
+    } finally {
+      setLoading(false)
     }
   }
 
   const deleteAnalysis = async (
     id: number
   ) => {
-
     try {
-
-      const token = localStorage.getItem(
-        "token"
-      )
-
-      await fetch(
-        `http://127.0.0.1:8000/analyses/${id}`,
-        {
-          method: "DELETE",
-
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
+      await deleteAnalysisById(id)
 
       setAnalyses((prev) =>
         prev.filter(
@@ -101,13 +53,9 @@ export default function HistoryPage() {
             analysis.id !== id
         )
       )
-
     } catch (error) {
-
       console.error(error)
-
     }
-
   }
 
   const getScoreColor = (

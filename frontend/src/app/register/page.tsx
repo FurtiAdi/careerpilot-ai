@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { register } from "@/services/authService"
 import {
   User,
   Mail,
@@ -33,65 +34,38 @@ export default function RegisterPage() {
     useState(false)
 
   const registerUser = async () => {
-
     if (
       !fullName ||
       !email ||
       !password
     ) {
-
       alert("Please fill all fields")
-
       return
     }
 
     try {
-
       setLoading(true)
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/register",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-
-            full_name: fullName,
-
-            email,
-
-            password
-          })
-        }
-      )
-
-      const data = await response.json()
-
-      if (data.error) {
-
-        alert(data.error)
-
-        return
-      }
+      await register({
+        fullName,
+        email,
+        password,
+        resumeFile,
+        profileImage,
+      })
 
       alert("Account created successfully!")
 
       router.push("/login")
-
     } catch (error) {
-
       console.error(error)
 
+      if (error instanceof Error) {
+        alert(error.message)
+      }
     } finally {
-
       setLoading(false)
-
     }
-
   }
 
   return (

@@ -20,7 +20,7 @@ class User(Base):
     
     full_name = Column(String)
 
-    profile_picture = Column(String, nullable=True)
+    profile_picture_filename = Column(String, nullable=True)
 
     resume_filename = Column(String, nullable=True)
 
