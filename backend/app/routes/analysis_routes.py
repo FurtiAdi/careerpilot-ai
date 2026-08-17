@@ -11,18 +11,11 @@ from app.dependencies.auth_dependencies import (
     get_current_user
 )
 
-from app.services.ai_service import (
-    generate_ai_analysis
+from app.services.analysis_service import (
+    analyze_job_for_user
 )
-
-from app.services.job_service import (
-    extract_skills,
-    calculate_match_score
-)
-
 
 router = APIRouter()
-
 
 @router.post("/analyze-job")
 def analyze_job(
@@ -31,53 +24,12 @@ def analyze_job(
     current_user: User = Depends(get_current_user)
 ):
 
-    description = job.job_description
-
-    candidate_skills = job.candidate_skills
-
-    ai_analysis = generate_ai_analysis(
-        description,
-        candidate_skills
-    )
-
-    extracted_skills = extract_skills(
-        description
-    )
-
-    score_results = calculate_match_score(
-        extracted_skills,
-        candidate_skills
-    )
-
-    new_analysis = Analysis(
-
+    return analyze_job_for_user(
+        job_description=job.job_description,
+        candidate_skills=job.candidate_skills,
         user_id=current_user.id,
-
-        job_description=description,
-
-        candidate_skills=", ".join(
-            candidate_skills
-        ),
-
-        match_score=score_results["match_score"],
-
-        ai_summary=ai_analysis["summary"]
+        db=db
     )
-
-    db.add(new_analysis)
-
-    db.commit()
-
-    db.refresh(new_analysis)
-
-    return {
-        "job_description": description,
-        "detected_job_skills": extracted_skills,
-        "candidate_skills": candidate_skills,
-        "match_analysis": score_results,
-        "ai_analysis": ai_analysis
-    }
-
 
 @router.get("/analyses")
 def get_analyses(
