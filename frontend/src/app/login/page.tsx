@@ -30,8 +30,6 @@ export default function LoginPage() {
 
       window.location.href = "/"
     } catch (error) {
-      console.error(error)
-
       if (error instanceof Error) {
         alert(error.message)
       }
