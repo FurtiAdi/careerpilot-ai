@@ -6,10 +6,6 @@ from sqlalchemy.orm import Session
 from app.models.user_model import User
 
 from app.services.auth_service import (
-    hash_password
-)
-
-from app.services.auth_service import (
     hash_password,
     verify_password,
     create_access_token

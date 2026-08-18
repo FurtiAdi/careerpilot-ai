@@ -1,23 +1,15 @@
-import os
-import shutil
-
-from uuid import uuid4
-
 from fastapi import APIRouter, UploadFile, File, Depends
 from sqlalchemy.orm import Session
-
 from app.database.database import get_db
-
-from app.models.analysis_model import Analysis
 from app.models.user_model import User
-
-from app.dependencies.auth_dependencies import (
-    get_current_user
+from app.dependencies.auth_dependencies import get_current_user
+from app.services.profile_service import (
+    get_user_profile,
+    save_profile_picture,
+    get_profile_stats
 )
 
-
 router = APIRouter()
-
 
 @router.get("/me")
 def get_current_user_profile(
@@ -26,15 +18,9 @@ def get_current_user_profile(
     )
 ):
 
-    return {
-        "id": current_user.id,
-        "full_name": current_user.full_name,
-        "email": current_user.email,
-        "resume_filename": current_user.resume_filename,
-        "profile_picture_filename":
-            current_user.profile_picture_filename
-    }
-
+    return get_user_profile(
+        current_user
+    )
 
 @router.post("/upload-profile-picture")
 async def upload_profile_picture(
@@ -45,77 +31,22 @@ async def upload_profile_picture(
     )
 ):
 
-    upload_dir = "uploads/profile_pictures"
-
-    os.makedirs(
-        upload_dir,
-        exist_ok=True
+    return save_profile_picture(
+        file=file,
+        current_user=current_user,
+        db=db
     )
-
-    file_extension = (
-        file.filename.split(".")[-1]
-    )
-
-    unique_filename = (
-        f"{uuid4()}.{file_extension}"
-    )
-
-    file_path = (
-        f"{upload_dir}/{unique_filename}"
-    )
-
-    with open(
-        file_path,
-        "wb"
-    ) as buffer:
-
-        shutil.copyfileobj(
-            file.file,
-            buffer
-        )
-
-    current_user.profile_picture_filename = (
-        unique_filename
-    )
-
-    db.commit()
-
-    return {
-        "profile_picture_filename":
-            unique_filename
-    }
 
 
 @router.get("/profile-stats")
-def get_profile_stats(
+def get_profile_stats_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         get_current_user
     )
 ):
 
-    analyses = db.query(Analysis).filter(
-        Analysis.user_id == current_user.id
-    ).all()
-
-    total_analyses = len(analyses)
-
-    average_score = 0
-
-    if total_analyses > 0:
-
-        average_score = round(
-            sum(
-                analysis.match_score
-                for analysis in analyses
-            ) / total_analyses
-        )
-
-    return {
-        "total_analyses": total_analyses,
-        "average_match_score":
-            average_score,
-        "resume_uploaded": bool(
-            current_user.resume_filename
-        )
-    }
+    return get_profile_stats(
+        current_user=current_user,
+        db=db
+    )

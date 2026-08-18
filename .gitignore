@@ -10,3 +10,6 @@ node_modules/
 
 # Environment variables
 .env
+
+# User uploads
+backend/uploads/
