@@ -1,9 +1,16 @@
 from sqlalchemy.orm import Session
 
 from app.models.analysis_model import Analysis
-from app.services.ai_service import generate_ai_analysis
-from app.services.job_service import (
-    extract_skills,
+
+from app.services.ai_service import (
+    generate_ai_analysis
+)
+
+from app.skills.requirements import (
+    classify_skill_requirements
+)
+
+from app.skills.scorer import (
     calculate_match_score
 )
 
@@ -20,13 +27,14 @@ def analyze_job_for_user(
         candidate_skills
     )
 
-    extracted_skills = extract_skills(
+    requirements = classify_skill_requirements(
         job_description
     )
 
     score_results = calculate_match_score(
-        extracted_skills,
-        candidate_skills
+        required_skills=requirements.required,
+        preferred_skills=requirements.preferred,
+        candidate_skills=candidate_skills
     )
 
     new_analysis = Analysis(
@@ -52,7 +60,10 @@ def analyze_job_for_user(
 
     return {
         "job_description": job_description,
-        "detected_job_skills": extracted_skills,
+        "detected_job_skills": {
+            "required": requirements.required,
+            "preferred": requirements.preferred
+        },
         "candidate_skills": candidate_skills,
         "match_analysis": score_results,
         "ai_analysis": ai_analysis
