@@ -55,7 +55,6 @@ export async function uploadResumeFile(
     {
       method: "POST",
       body: formData,
-      isFormData: true,
     }
   )
 }

@@ -5,9 +5,18 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+
+  const isFormData = options.body instanceof FormData
+
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
+
     headers: {
+      ...(!isFormData && options.body
+        ? {
+            "Content-Type": "application/json",
+          }
+        : {}),
       ...options.headers,
     },
   })
@@ -45,6 +54,7 @@ export async function authenticatedApiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+
   const token = localStorage.getItem("token")
 
   if (!token) {
