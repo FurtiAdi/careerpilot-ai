@@ -53,18 +53,31 @@ def classify_skill_requirements(
             ):
                 preferred_start = index
 
-    required_text = text
+    if preferred_start is None:
 
-    if preferred_start is not None:
-        required_text = text[:preferred_start]
+        required_skills = extract_skills_from_text(
+            text
+        )
 
-    required_skills = extract_skills_from_text(
-        required_text
-    )
+    else:
 
-    if preferred_start is not None:
+        # Find the beginning of the sentence
+        # containing the preferred marker.
+        sentence_start = max(
+            text.rfind(".", 0, preferred_start),
+            text.rfind("!", 0, preferred_start),
+            text.rfind("?", 0, preferred_start)
+        )
 
-        preferred_text = text[preferred_start:]
+        sentence_start += 1
+
+        required_text = text[:sentence_start]
+
+        preferred_text = text[sentence_start:]
+
+        required_skills = extract_skills_from_text(
+            required_text
+        )
 
         preferred_skills = extract_skills_from_text(
             preferred_text
