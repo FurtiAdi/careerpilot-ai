@@ -1,32 +1,15 @@
-KNOWN_SKILLS = [
-    "python",
-    "fastapi",
-    "react",
-    "next.js",
-    "javascript",
-    "typescript",
-    "sql",
-    "postgresql",
-    "docker",
-    "aws",
-    "git",
-    "machine learning",
-    "ai"
-]
+from app.skills.extractor import (
+    extract_skills_from_text
+)
 
 
-def extract_skills(job_description: str):
+def extract_skills(
+    job_description: str
+):
 
-    found_skills = []
-
-    lower_description = job_description.lower()
-
-    for skill in KNOWN_SKILLS:
-
-        if skill in lower_description:
-            found_skills.append(skill)
-
-    return found_skills
+    return extract_skills_from_text(
+        job_description
+    )
 
 def calculate_match_score(job_skills, candidate_skills):
 

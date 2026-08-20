@@ -516,83 +516,200 @@ export default function Home() {
 
             </div>
 
-
             {/* =========================
-                MATCHED / MISSING SKILLS
+                SKILL MATCHING
             ========================= */}
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
 
-
-              {/* Matched Skills */}
+              {/* Required Skills */}
               <div className="bg-black/30 rounded-2xl p-6">
 
                 <h3 className="text-xl font-bold mb-6 text-green-400">
-                    ✅ Matched Skills
+                  ✅ Required Skills
                 </h3>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="space-y-6">
 
-                  {results.match_analysis.matched_skills.length > 0 ? (
-                    results.match_analysis.matched_skills.map(
-                    (skill: string) => (
-
-                      <div
-                        key={skill}
-                        className="
-                          px-4 py-2 rounded-full
-                          bg-green-500/10
-                          border border-green-500/20
-                          text-green-300
-                          text-sm font-medium
-                        "
-                      >
-                        {skill}
-                      </div>
-
-                    )
-                  )) : (
-
-                    <p className="text-gray-500">
-                      No matched skills found.
+                  {/* Matched Required */}
+                  <div>
+                    <p className="text-sm text-gray-400 mb-3">
+                      Matched
                     </p>
 
-                  )}
+                    <div className="flex flex-wrap gap-3">
+
+                      {results.match_analysis.matched_required_skills.length > 0 ? (
+
+                        results.match_analysis.matched_required_skills.map(
+                          (skill: string) => (
+
+                            <div
+                              key={skill}
+                              className="
+                                px-4 py-2 rounded-full
+                                bg-green-500/10
+                                border border-green-500/20
+                                text-green-300
+                                text-sm font-medium
+                              "
+                            >
+                              {skill}
+                            </div>
+
+                          )
+                        )
+
+                      ) : (
+
+                        <p className="text-gray-500">
+                          No required skills matched.
+                        </p>
+
+                      )}
+
+                    </div>
+                  </div>
+
+
+                  {/* Missing Required */}
+                  <div>
+
+                    <p className="text-sm text-gray-400 mb-3">
+                      Missing
+                    </p>
+
+                    <div className="flex flex-wrap gap-3">
+
+                      {results.match_analysis.missing_required_skills.length > 0 ? (
+
+                        results.match_analysis.missing_required_skills.map(
+                          (skill: string) => (
+
+                            <div
+                              key={skill}
+                              className="
+                                px-4 py-2 rounded-full
+                                bg-red-500/10
+                                border border-red-500/20
+                                text-red-300
+                                text-sm font-medium
+                              "
+                            >
+                              {skill}
+                            </div>
+
+                          )
+                        )
+
+                      ) : (
+
+                        <p className="text-gray-500">
+                          No missing required skills.
+                        </p>
+
+                      )}
+
+                    </div>
+                  </div>
 
                 </div>
-
               </div>
 
 
-              {/* Missing Skills */}
+              {/* Preferred Skills */}
               <div className="bg-black/30 rounded-2xl p-6">
 
-                <h3 className="text-xl font-bold mb-6 text-red-400">
-                  ❌ Missing Skills
+                <h3 className="text-xl font-bold mb-6 text-blue-400">
+                  ⭐ Preferred Skills
                 </h3>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="space-y-6">
 
-                  {results.match_analysis.missing_skills.map(
-                    (skill: string) => (
-                      <div
-                        key={skill}
-                        className="
-                          px-4 py-2 rounded-full
-                          bg-red-500/10
-                          border border-red-500/20
-                          text-red-300
-                          text-sm font-medium
-                        "
-                      >
-                        {skill}
-                      </div>
+                  {/* Matched Preferred */}
+                  <div>
 
-                    )
-                  )}
+                    <p className="text-sm text-gray-400 mb-3">
+                      Matched
+                    </p>
+
+                    <div className="flex flex-wrap gap-3">
+
+                      {results.match_analysis.matched_preferred_skills.length > 0 ? (
+
+                        results.match_analysis.matched_preferred_skills.map(
+                          (skill: string) => (
+
+                            <div
+                              key={skill}
+                              className="
+                                px-4 py-2 rounded-full
+                                bg-green-500/10
+                                border border-green-500/20
+                                text-green-300
+                                text-sm font-medium
+                              "
+                            >
+                              {skill}
+                            </div>
+
+                          )
+                        )
+
+                      ) : (
+
+                        <p className="text-gray-500">
+                          No preferred skills matched.
+                        </p>
+
+                      )}
+
+                    </div>
+                  </div>
+
+
+                  {/* Missing Preferred */}
+                  <div>
+
+                    <p className="text-sm text-gray-400 mb-3">
+                      Missing
+                    </p>
+
+                    <div className="flex flex-wrap gap-3">
+
+                      {results.match_analysis.missing_preferred_skills.length > 0 ? (
+
+                        results.match_analysis.missing_preferred_skills.map(
+                          (skill: string) => (
+
+                            <div
+                              key={skill}
+                              className="
+                                px-4 py-2 rounded-full
+                                bg-yellow-500/10
+                                border border-yellow-500/20
+                                text-yellow-300
+                                text-sm font-medium
+                              "
+                            >
+                              {skill}
+                            </div>
+
+                          )
+                        )
+
+                      ) : (
+
+                        <p className="text-gray-500">
+                          No missing preferred skills.
+                        </p>
+
+                      )}
+
+                    </div>
+                  </div>
 
                 </div>
-
               </div>
 
             </div>
