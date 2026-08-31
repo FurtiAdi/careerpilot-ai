@@ -2,7 +2,8 @@ import os
 
 from datetime import (
     datetime,
-    timedelta
+    timedelta,
+    timezone,
 )
 
 from jose import jwt, JWTError
@@ -55,7 +56,7 @@ def create_access_token(
     to_encode = data.copy()
 
     expire = (
-        datetime.utcnow() +
+        datetime.now(timezone.utc) +
         timedelta(
             minutes=ACCESS_TOKEN_EXPIRE_MINUTES
         )

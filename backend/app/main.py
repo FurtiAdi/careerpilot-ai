@@ -18,10 +18,13 @@ logger = logging.getLogger(__name__)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
 app.mount(
-    "/uploads",
-    StaticFiles(directory="uploads"),
-    name="uploads",
+    "/uploads/profile_pictures",
+    StaticFiles(
+        directory="uploads/profile_pictures"
+    ),
+    name="profile_pictures",
 )
 
 @app.exception_handler(Exception)
