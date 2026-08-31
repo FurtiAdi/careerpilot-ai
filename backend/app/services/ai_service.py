@@ -23,13 +23,19 @@ class AIAnalysisError(Exception):
 
 
 def generate_ai_analysis(
-    job_description: str,
-    candidate_skills: list[str]
+    match_score: int,
+    matched_required_skills: list[str],
+    missing_required_skills: list[str],
+    matched_preferred_skills: list[str],
+    missing_preferred_skills: list[str],
 ) -> AIAnalysisResponse:
 
     prompt = build_analysis_prompt(
-        job_description=job_description,
-        candidate_skills=candidate_skills,
+        match_score=match_score,
+        matched_required_skills=matched_required_skills,
+        missing_required_skills=missing_required_skills,
+        matched_preferred_skills=matched_preferred_skills,
+        missing_preferred_skills=missing_preferred_skills,
     )
 
     try:

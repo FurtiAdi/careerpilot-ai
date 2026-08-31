@@ -22,11 +22,6 @@ def analyze_job_for_user(
     db: Session
 ):
 
-    ai_analysis = generate_ai_analysis(
-        job_description,
-        candidate_skills
-    )
-
     requirements = classify_skill_requirements(
         job_description
     )
@@ -35,6 +30,22 @@ def analyze_job_for_user(
         required_skills=requirements.required,
         preferred_skills=requirements.preferred,
         candidate_skills=candidate_skills
+    )
+
+    ai_analysis = generate_ai_analysis(
+        match_score=score_results["match_score"],
+        matched_required_skills=(
+            score_results["matched_required_skills"]
+        ),
+        missing_required_skills=(
+            score_results["missing_required_skills"]
+        ),
+        matched_preferred_skills=(
+            score_results["matched_preferred_skills"]
+        ),
+        missing_preferred_skills=(
+            score_results["missing_preferred_skills"]
+        ),
     )
 
     new_analysis = Analysis(
@@ -49,7 +60,7 @@ def analyze_job_for_user(
 
         match_score=score_results["match_score"],
 
-        ai_summary=ai_analysis["summary"]
+        ai_summary=ai_analysis.summary,
     )
 
     db.add(new_analysis)
