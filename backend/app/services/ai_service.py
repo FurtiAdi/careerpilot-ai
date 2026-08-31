@@ -1,20 +1,16 @@
-import os
-
-from dotenv import load_dotenv
 from openai import OpenAI, OpenAIError
 
 from app.models.ai_schema import AIAnalysisResponse
 from app.services.ai_prompts import (
-    AI_ANALYSIS_MODEL,
     AI_ANALYSIS_SYSTEM_PROMPT,
     build_analysis_prompt,
 )
 
-load_dotenv()
+from app.core.config import settings
 
 
 client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
+    api_key=settings.OPENAI_API_KEY
 )
 
 
@@ -40,7 +36,7 @@ def generate_ai_analysis(
 
     try:
         response = client.beta.chat.completions.parse(
-            model=AI_ANALYSIS_MODEL,
+            model=settings.AI_ANALYSIS_MODEL,
             messages=[
                 {
                     "role": "system",

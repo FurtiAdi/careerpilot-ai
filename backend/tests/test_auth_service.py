@@ -46,7 +46,7 @@ def test_create_and_verify_access_token(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        auth_service,
+        auth_service.settings,
         "SECRET_KEY",
         TEST_SECRET_KEY,
     )
@@ -68,7 +68,7 @@ def test_verify_token_returns_none_when_sub_missing(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        auth_service,
+        auth_service.settings,
         "SECRET_KEY",
         TEST_SECRET_KEY,
     )
@@ -90,7 +90,7 @@ def test_verify_token_returns_none_for_invalid_token(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        auth_service,
+        auth_service.settings,
         "SECRET_KEY",
         TEST_SECRET_KEY,
     )
@@ -106,7 +106,7 @@ def test_verify_token_returns_none_for_expired_token(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        auth_service,
+        auth_service.settings,
         "SECRET_KEY",
         TEST_SECRET_KEY,
     )
@@ -122,7 +122,7 @@ def test_verify_token_returns_none_for_expired_token(
     token = jwt.encode(
         expired_payload,
         TEST_SECRET_KEY,
-        algorithm=auth_service.ALGORITHM,
+        algorithm=auth_service.settings.JWT_ALGORITHM,
     )
 
     result = auth_service.verify_token(

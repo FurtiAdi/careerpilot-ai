@@ -1,28 +1,41 @@
 import logging
+import os
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from app.database.database import engine
-from app.database.database import Base
-from app.models.analysis_model import Analysis
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from app.core.config import settings
 from app.routes.analysis_routes import router as analysis_router
 from app.routes.auth_routes import router as auth_router
 from app.routes.profile_routes import router as profile_router
 from app.routes.resume_routes import router as resume_router
-from app.models.user_model import User
-from fastapi.staticfiles import StaticFiles
+
 
 logger = logging.getLogger(__name__)
+
+os.makedirs(
+    settings.PROFILE_PICTURE_DIR,
+    exist_ok=True,
+)
 
 app = FastAPI()
 
 app.mount(
     "/uploads/profile_pictures",
     StaticFiles(
-        directory="uploads/profile_pictures"
+        directory=settings.PROFILE_PICTURE_DIR
     ),
     name="profile_pictures",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.exception_handler(Exception)
@@ -44,10 +57,7 @@ async def unexpected_exception_handler(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-    ],
+    allow_origins= settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

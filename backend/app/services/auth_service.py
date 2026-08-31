@@ -1,5 +1,3 @@
-import os
-
 from datetime import (
     datetime,
     timedelta,
@@ -7,22 +5,9 @@ from datetime import (
 )
 
 from jose import jwt, JWTError
-
 from passlib.context import CryptContext
 
-from dotenv import load_dotenv
-
-
-load_dotenv()
-
-
-SECRET_KEY = os.getenv(
-    "SECRET_KEY"
-)
-
-ALGORITHM = "HS256"
-
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+from app.core.config import settings
 
 
 pwd_context = CryptContext(
@@ -58,7 +43,7 @@ def create_access_token(
     expire = (
         datetime.now(timezone.utc) +
         timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
     )
 
@@ -68,8 +53,8 @@ def create_access_token(
 
     encoded_jwt = jwt.encode(
         to_encode,
-        SECRET_KEY,
-        algorithm=ALGORITHM
+        settings.SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
     )
 
     return encoded_jwt
@@ -80,8 +65,8 @@ def verify_token(token: str):
 
         payload = jwt.decode(
             token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
+            settings.SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM]
         )
 
         email = payload.get("sub")

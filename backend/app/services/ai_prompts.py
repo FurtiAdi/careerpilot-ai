@@ -1,6 +1,3 @@
-AI_ANALYSIS_MODEL = "gpt-4.1-mini"
-
-
 AI_ANALYSIS_SYSTEM_PROMPT = (
     "You are an AI career assistant. "
     "Provide concise, practical career advice."
