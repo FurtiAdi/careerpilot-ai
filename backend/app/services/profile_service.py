@@ -46,7 +46,7 @@ async def save_profile_picture(
     )
 
     unique_filename = generate_profile_picture_filename(
-        file
+        file.content_type or ""
     )
 
     file_path = (

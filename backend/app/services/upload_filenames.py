@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fastapi import HTTPException, UploadFile, status
+from fastapi import HTTPException, status
 
 
 PROFILE_IMAGE_EXTENSIONS = {
@@ -11,10 +11,8 @@ PROFILE_IMAGE_EXTENSIONS = {
 
 
 def generate_profile_picture_filename(
-    file: UploadFile,
+    content_type: str,
 ) -> str:
-    content_type = file.content_type or ""
-
     extension = PROFILE_IMAGE_EXTENSIONS.get(
         content_type
     )

@@ -1,7 +1,5 @@
 import os
-import shutil
 
-from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
 from app.models.user_model import User
@@ -52,7 +50,8 @@ def register_user(
     email: str,
     password: str,
     resume_content: bytes | None,
-    profile_picture: UploadFile | None,
+    profile_picture_content: bytes | None,
+    profile_picture_content_type: str | None,
     db: Session
 ):
 
@@ -87,8 +86,10 @@ def register_user(
 
             buffer.write(resume_content)
 
-    if profile_picture:
-
+    if (
+        profile_picture_content
+        and profile_picture_content_type
+    ):
         os.makedirs(
             "uploads/profile_pictures",
             exist_ok=True,
@@ -96,7 +97,7 @@ def register_user(
 
         profile_picture_filename = (
             generate_profile_picture_filename(
-                profile_picture
+                profile_picture_content_type
             )
         )
 
@@ -104,10 +105,8 @@ def register_user(
             f"uploads/profile_pictures/{profile_picture_filename}",
             "wb"
         ) as buffer:
-
-            shutil.copyfileobj(
-                profile_picture.file,
-                buffer
+            buffer.write(
+                profile_picture_content
             )
 
     new_user = User(

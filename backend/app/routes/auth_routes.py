@@ -12,6 +12,7 @@ from app.database.database import get_db
 from app.models.user_schema import UserLogin
 from app.services.upload_validation import (
     read_validated_pdf,
+    read_validated_profile_image,
 )
 from app.services.user_service import (
     register_user,
@@ -38,10 +39,18 @@ async def register_user_route(
 
 ):
     resume_content = None
+    profile_picture_content = None
 
     if resume is not None:
         resume_content = await read_validated_pdf(
             resume
+        )
+
+    if profile_picture is not None:
+        profile_picture_content = (
+            await read_validated_profile_image(
+                profile_picture
+            )
         )
 
     new_user = register_user(
@@ -49,15 +58,20 @@ async def register_user_route(
         email=email,
         password=password,
         resume_content=resume_content,
-        profile_picture=profile_picture,
+        profile_picture_content=profile_picture_content,
+        profile_picture_content_type=(
+            profile_picture.content_type
+            if profile_picture
+            else None
+        ),
         db=db
     )
 
     if not new_user:
-
-        return {
-            "error": "Email already exists"
-        }
+        raise HTTPException(
+            status_code=409,
+            detail="Email already exists",
+        )
 
     return {
         "message": "User registered successfully"
