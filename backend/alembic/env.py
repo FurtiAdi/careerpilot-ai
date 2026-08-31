@@ -1,11 +1,10 @@
-import os
 from logging.config import fileConfig
 
 from alembic import context
-from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
+from app.core.config import settings
 from app.database.database import Base
 from app.models.analysis_model import Analysis
 from app.models.user_model import User
@@ -14,22 +13,10 @@ from app.models.user_model import User
 # access to the values within the .ini file in use.
 config = context.config
 
-load_dotenv(".env")
-
-database_url = (
-    f"postgresql://"
-    f"{os.getenv('POSTGRES_USER')}:"
-    f"{os.getenv('POSTGRES_PASSWORD')}@"
-    f"{os.getenv('POSTGRES_HOST')}:"
-    f"{os.getenv('POSTGRES_PORT')}/"
-    f"{os.getenv('POSTGRES_DB')}"
+config.set_main_option(
+    "sqlalchemy.url",
+    settings.DATABASE_URL,
 )
-
-if database_url:
-    config.set_main_option(
-        "sqlalchemy.url",
-        database_url,
-    )
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
