@@ -1,8 +1,11 @@
 import os
 import tempfile
 
-from fastapi import APIRouter, File, UploadFile
-
+from fastapi import APIRouter, Depends, File, UploadFile
+from app.dependencies.auth_dependencies import (
+    get_current_user,
+)
+from app.models.user_model import User
 from app.services.job_service import extract_skills
 from app.services.resume_service import extract_text_from_pdf
 from app.services.upload_validation import read_validated_pdf
@@ -13,7 +16,8 @@ router = APIRouter()
 
 @router.post("/upload-resume")
 async def upload_resume(
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
 ):
     file_content = await read_validated_pdf(file)
     temp_file_path = None
@@ -46,4 +50,3 @@ async def upload_resume(
             and os.path.exists(temp_file_path)
         ):
             os.remove(temp_file_path)
-            
