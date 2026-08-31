@@ -85,4 +85,32 @@ async def read_validated_profile_image(
             detail="Profile pictures must not exceed 2 MiB.",
         )
 
+    if content_type == "image/jpeg":
+        is_valid_image = content.startswith(
+            b"\xff\xd8\xff"
+        )
+
+    elif content_type == "image/png":
+        is_valid_image = content.startswith(
+            b"\x89PNG\r\n\x1a\n"
+        )
+
+    elif content_type == "image/webp":
+        is_valid_image = (
+            len(content) >= 12
+            and content.startswith(b"RIFF")
+            and content[8:12] == b"WEBP"
+        )
+
+    else:
+        is_valid_image = False
+
+    if not is_valid_image:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="The uploaded file is not a valid image.",
+        )
+
+
+
     return content
