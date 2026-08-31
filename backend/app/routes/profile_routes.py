@@ -40,7 +40,7 @@ async def upload_profile_picture(
     )
 ):
 
-    return save_profile_picture(
+    return await save_profile_picture(
         file=file,
         current_user=current_user,
         db=db

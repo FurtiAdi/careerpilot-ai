@@ -1,8 +1,11 @@
 import os
-import shutil
 
 from app.services.upload_filenames import (
     generate_profile_picture_filename,
+)
+
+from app.services.upload_validation import (
+    read_validated_profile_image,
 )
 
 from fastapi import UploadFile
@@ -26,12 +29,15 @@ def get_user_profile(
     }
 
 
-def save_profile_picture(
+async def save_profile_picture(
     file: UploadFile,
     current_user: User,
     db: Session
 ):
 
+    file_content = await read_validated_profile_image(
+        file
+    )
     upload_dir = "uploads/profile_pictures"
 
     os.makedirs(
@@ -51,11 +57,7 @@ def save_profile_picture(
         file_path,
         "wb"
     ) as buffer:
-
-        shutil.copyfileobj(
-            file.file,
-            buffer
-        )
+        buffer.write(file_content)
 
     current_user.profile_picture_filename = (
         unique_filename
