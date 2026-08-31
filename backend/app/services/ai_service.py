@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 from openai import OpenAI, OpenAIError
 
 from app.models.ai_schema import AIAnalysisResponse
-
+from app.services.ai_prompts import (
+    AI_ANALYSIS_MODEL,
+    AI_ANALYSIS_SYSTEM_PROMPT,
+    build_analysis_prompt,
+)
 
 load_dotenv()
 
@@ -23,26 +27,18 @@ def generate_ai_analysis(
     candidate_skills: list[str]
 ) -> AIAnalysisResponse:
 
-    prompt = f"""
-Analyze the following job description and candidate skills.
-
-Job Description:
-{job_description}
-
-Candidate Skills:
-{candidate_skills}
-"""
+    prompt = build_analysis_prompt(
+        job_description=job_description,
+        candidate_skills=candidate_skills,
+    )
 
     try:
         response = client.beta.chat.completions.parse(
-            model="gpt-4.1-mini",
+            model=AI_ANALYSIS_MODEL,
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "You are an AI career assistant. "
-                        "Provide concise, practical career advice."
-                    ),
+                    "content": AI_ANALYSIS_SYSTEM_PROMPT,
                 },
                 {
                     "role": "user",
