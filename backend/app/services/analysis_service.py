@@ -65,7 +65,11 @@ def analyze_job_for_user(
 
     db.add(new_analysis)
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     db.refresh(new_analysis)
 
@@ -106,6 +110,10 @@ def delete_user_analysis(
 
     db.delete(analysis)
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return analysis

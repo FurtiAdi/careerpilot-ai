@@ -61,7 +61,11 @@ def save_profile_picture(
         unique_filename
     )
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "profile_picture_filename":

@@ -125,7 +125,11 @@ def register_user(
 
     db.add(new_user)
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     db.refresh(new_user)
 
