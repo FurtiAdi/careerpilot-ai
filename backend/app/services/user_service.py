@@ -14,6 +14,7 @@ from app.services.auth_service import (
 
 from app.services.upload_filenames import (
     generate_profile_picture_filename,
+    generate_resume_filename,
 )
 
 
@@ -50,7 +51,7 @@ def register_user(
     full_name: str,
     email: str,
     password: str,
-    resume: UploadFile | None,
+    resume_content: bytes | None,
     profile_picture: UploadFile | None,
     db: Session
 ):
@@ -70,19 +71,21 @@ def register_user(
     resume_filename = None
     profile_picture_filename = None
 
-    if resume:
+    if resume_content:
 
-        resume_filename = resume.filename
+        os.makedirs(
+            "uploads/resumes",
+            exist_ok=True,
+        )
+
+        resume_filename = generate_resume_filename()
 
         with open(
             f"uploads/resumes/{resume_filename}",
             "wb"
         ) as buffer:
 
-            shutil.copyfileobj(
-                resume.file,
-                buffer
-            )
+            buffer.write(resume_content)
 
     if profile_picture:
 

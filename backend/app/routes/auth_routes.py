@@ -10,7 +10,9 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.models.user_schema import UserLogin
-
+from app.services.upload_validation import (
+    read_validated_pdf,
+)
 from app.services.user_service import (
     register_user,
     authenticate_user
@@ -20,7 +22,7 @@ router = APIRouter()
 
 
 @router.post("/register")
-def register_user_route(
+async def register_user_route(
 
     full_name: str = Form(...),
 
@@ -35,12 +37,18 @@ def register_user_route(
     db: Session = Depends(get_db)
 
 ):
+    resume_content = None
+
+    if resume is not None:
+        resume_content = await read_validated_pdf(
+            resume
+        )
 
     new_user = register_user(
         full_name=full_name,
         email=email,
         password=password,
-        resume=resume,
+        resume_content=resume_content,
         profile_picture=profile_picture,
         db=db
     )

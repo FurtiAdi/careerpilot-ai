@@ -29,3 +29,7 @@ def generate_profile_picture_filename(
         )
 
     return f"{uuid4()}{extension}"
+
+
+def generate_resume_filename() -> str:
+    return f"{uuid4()}.pdf"
