@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.job_models import JobRequest
@@ -56,9 +56,10 @@ def delete_analysis(
     )
 
     if not analysis:
-        return {
-            "error": "Analysis not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis not found",
+        )
 
     return {
         "message": "Analysis deleted"

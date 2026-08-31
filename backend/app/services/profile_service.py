@@ -1,11 +1,17 @@
 import os
-import shutil
 
-from uuid import uuid4
+from app.services.upload_filenames import (
+    generate_profile_picture_filename,
+)
+
+from app.services.upload_validation import (
+    read_validated_profile_image,
+)
 
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.analysis_model import Analysis
 from app.models.user_model import User
 
@@ -24,25 +30,25 @@ def get_user_profile(
     }
 
 
-def save_profile_picture(
+async def save_profile_picture(
     file: UploadFile,
     current_user: User,
     db: Session
 ):
 
-    upload_dir = "uploads/profile_pictures"
+    file_content = await read_validated_profile_image(
+        file
+    )
+
+    upload_dir = settings.PROFILE_PICTURE_DIR
 
     os.makedirs(
         upload_dir,
         exist_ok=True
     )
 
-    file_extension = (
-        file.filename.split(".")[-1]
-    )
-
-    unique_filename = (
-        f"{uuid4()}.{file_extension}"
+    unique_filename = generate_profile_picture_filename(
+        file.content_type or ""
     )
 
     file_path = (
@@ -53,18 +59,34 @@ def save_profile_picture(
         file_path,
         "wb"
     ) as buffer:
+        buffer.write(file_content)
 
-        shutil.copyfileobj(
-            file.file,
-            buffer
-        )
-
+    old_filename = (
+        current_user.profile_picture_filename
+    )
+    
     current_user.profile_picture_filename = (
         unique_filename
     )
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
+    if (
+        old_filename
+        and old_filename != unique_filename
+    ):
+        old_file_path = os.path.join(
+            upload_dir,
+            old_filename,
+        )
+
+        if os.path.isfile(old_file_path):
+            os.remove(old_file_path)
+            
     return {
         "profile_picture_filename":
             unique_filename

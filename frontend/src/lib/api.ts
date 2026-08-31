@@ -1,5 +1,18 @@
-const API_URL =
+export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+  
+export class ApiError extends Error {
+  status: number
+
+  constructor(
+    message: string,
+    status: number
+  ) {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+  }
+}
 
 export async function apiRequest<T>(
   endpoint: string,
@@ -31,7 +44,10 @@ export async function apiRequest<T>(
       // Response was not JSON
     }
 
-    throw new Error(message)
+    throw new ApiError(
+      message, 
+      response.status
+    )
   }
 
   if (response.status === 204) {
@@ -58,14 +74,36 @@ export async function authenticatedApiRequest<T>(
   const token = localStorage.getItem("token")
 
   if (!token) {
-    throw new Error("Not authenticated")
+    if (typeof window !== "undefined") {
+      window.location.href = "/login"
+    }
+
+    throw new ApiError(
+      "Authentication required",
+      401
+    )
   }
 
-  return apiRequest<T>(endpoint, {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${token}`,
-    },
-  })
+  try {
+    return await apiRequest<T>(endpoint, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      error.status === 401
+    ) {
+      localStorage.removeItem("token")
+
+      if (typeof window !== "undefined") {
+        window.location.href = "/login"
+      }
+    }
+    
+    throw error
+  }
 }

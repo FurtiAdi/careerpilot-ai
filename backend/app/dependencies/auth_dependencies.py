@@ -17,23 +17,36 @@ from app.services.auth_service import (
 
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="login"
+    tokenUrl="login",
+    auto_error=False,
 )
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ):
-
+    
+    if token is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication token is required.",
+            headers={
+                "WWW-Authenticate": "Bearer",
+            },
+        )
+    
     email = verify_token(token)
 
     if not email:
 
         raise HTTPException(
             status_code=401,
-            detail="Invalid token"
-        )
+            detail="Invalid or expired authentication token.",
+            headers={
+                "WWW-Authenticate": "Bearer",
+            },
+        )               
 
     user = db.query(User).filter(
         User.email == email
@@ -43,7 +56,10 @@ def get_current_user(
 
         raise HTTPException(
             status_code=401,
-            detail="User not found"
+            detail="Invalid or expired authentication token.",
+            headers={
+                "WWW-Authenticate": "Bearer",
+            },
         )
 
     return user

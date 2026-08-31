@@ -50,17 +50,6 @@ def calculate_match_score(
     ]
 
     if normalized_required:
-
-        required_score = (
-            len(matched_required)
-            / len(normalized_required)
-        ) * 100
-
-    else:
-
-        required_score = 100
-
-    if normalized_required:
         required_score = (
             len(matched_required)
             / len(normalized_required)

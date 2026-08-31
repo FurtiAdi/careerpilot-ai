@@ -6,7 +6,7 @@ from sqlalchemy import (
     ForeignKey
 )
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.database import Base
 
@@ -36,5 +36,5 @@ class Analysis(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=lambda: datetime.now(timezone.utc)
     )

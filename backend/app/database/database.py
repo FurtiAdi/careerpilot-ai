@@ -1,28 +1,13 @@
-import os
-
-from dotenv import load_dotenv
-
 from sqlalchemy import create_engine
-
-from sqlalchemy.ext.declarative import declarative_base
-
-from sqlalchemy.orm import sessionmaker
-
-
-load_dotenv()
-
-
-
-
-DATABASE_URL = (
-    f"postgresql://"
-    f"{os.getenv('POSTGRES_USER')}:"
-    f"{os.getenv('POSTGRES_PASSWORD')}@"
-    f"{os.getenv('POSTGRES_HOST')}:"
-    f"{os.getenv('POSTGRES_PORT')}/"
-    f"{os.getenv('POSTGRES_DB')}"
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    sessionmaker,
 )
 
+from app.core.config import settings
+
+
+DATABASE_URL = settings.DATABASE_URL
 
 engine = create_engine(DATABASE_URL)
 
@@ -32,16 +17,14 @@ SessionLocal = sessionmaker(
     bind=engine
 )
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
 def get_db():
-
     db = SessionLocal()
-
     try:
         yield db
-
     finally:
         db.close()
 

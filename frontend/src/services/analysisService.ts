@@ -9,6 +9,38 @@ export interface Analysis {
   created_at: string
 }
 
+export interface MatchAnalysis {
+  match_score: number
+  required_score: number
+  preferred_score: number
+  matched_required_skills: string[]
+  missing_required_skills: string[]
+  matched_preferred_skills: string[]
+  missing_preferred_skills: string[]
+  weights: {
+    required: number
+    preferred: number
+  }
+}
+
+export interface AIAnalysis {
+  summary: string
+  strengths: string[]
+  missing_requirements: string[]
+  recommendations: string[]
+}
+
+export interface AnalyzeJobResponse {
+  job_description: string
+  detected_job_skills: {
+    required: string[]
+    preferred: string[]
+  }
+  candidate_skills: string[]
+  match_analysis: MatchAnalysis
+  ai_analysis: AIAnalysis
+}
+
 export interface AnalyzeJobRequest {
   job_description: string
   candidate_skills: string[]
@@ -37,11 +69,14 @@ export async function deleteAnalysisById(
 
 export async function analyzeJobRequest(
   data: AnalyzeJobRequest
-) {
-  return authenticatedApiRequest("/analyze-job", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
+): Promise<AnalyzeJobResponse> {
+  return authenticatedApiRequest<AnalyzeJobResponse>(
+    "/analyze-job",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  )
 }
 
 export async function uploadResumeFile(

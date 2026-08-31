@@ -1,7 +1,8 @@
-import shutil
+import os
 
-from fastapi import UploadFile
 from sqlalchemy.orm import Session
+
+from app.core.config import settings
 
 from app.models.user_model import User
 
@@ -9,6 +10,11 @@ from app.services.auth_service import (
     hash_password,
     verify_password,
     create_access_token
+)
+
+from app.services.upload_filenames import (
+    generate_profile_picture_filename,
+    generate_resume_filename,
 )
 
 
@@ -45,8 +51,9 @@ def register_user(
     full_name: str,
     email: str,
     password: str,
-    resume: UploadFile | None,
-    profile_picture: UploadFile | None,
+    resume_content: bytes | None,
+    profile_picture_content: bytes | None,
+    profile_picture_content_type: str | None,
     db: Session
 ):
 
@@ -64,35 +71,59 @@ def register_user(
 
     resume_filename = None
     profile_picture_filename = None
+    resume_file_path = None
+    profile_picture_file_path = None    
 
-    if resume:
+    if resume_content:
 
-        resume_filename = resume.filename
+        os.makedirs(
+            settings.RESUME_DIR,
+            exist_ok=True,
+        )
 
-        with open(
-            f"uploads/resumes/{resume_filename}",
-            "wb"
-        ) as buffer:
-
-            shutil.copyfileobj(
-                resume.file,
-                buffer
+        resume_filename = generate_resume_filename()
+        resume_file_path = (
+            os.path.join(
+                settings.RESUME_DIR,
+                resume_filename,
             )
-
-    if profile_picture:
-
-        profile_picture_filename = (
-            profile_picture.filename
         )
 
         with open(
-            f"uploads/profile_pictures/{profile_picture_filename}",
+            resume_file_path,
             "wb"
         ) as buffer:
 
-            shutil.copyfileobj(
-                profile_picture.file,
-                buffer
+            buffer.write(resume_content)
+
+    if (
+        profile_picture_content
+        and profile_picture_content_type
+    ):
+        os.makedirs(
+            settings.PROFILE_PICTURE_DIR,
+            exist_ok=True,
+        )
+
+        profile_picture_filename = (
+            generate_profile_picture_filename(
+                profile_picture_content_type
+            )
+        )
+
+        profile_picture_file_path = (
+            os.path.join(
+                settings.PROFILE_PICTURE_DIR,
+                profile_picture_filename,
+            )
+        )
+
+        with open(
+            profile_picture_file_path,
+            "wb"
+        ) as buffer:
+            buffer.write(
+                profile_picture_content
             )
 
     new_user = User(
@@ -110,7 +141,22 @@ def register_user(
 
     db.add(new_user)
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
+        for file_path in (
+            resume_file_path,
+            profile_picture_file_path,
+        ):
+            if (
+                file_path
+                and os.path.isfile(file_path)
+            ):
+                os.remove(file_path)
+
+        raise
 
     db.refresh(new_user)
 

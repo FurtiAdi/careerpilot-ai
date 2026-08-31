@@ -1,64 +1,77 @@
-import os
-import json
+from openai import OpenAI, OpenAIError
 
-from openai import OpenAI
-from dotenv import load_dotenv
-
-
-load_dotenv()
-
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
+from app.models.ai_schema import AIAnalysisResponse
+from app.services.ai_prompts import (
+    AI_ANALYSIS_SYSTEM_PROMPT,
+    build_analysis_prompt,
 )
 
+from app.core.config import settings
+
+
+client = OpenAI(
+    api_key=settings.OPENAI_API_KEY
+)
+
+
+class AIAnalysisError(Exception):
+    """Raised when the AI response cannot be used safely."""
+
+
 def generate_ai_analysis(
-    job_description: str,
-    candidate_skills: list
-):
+    match_score: int,
+    matched_required_skills: list[str],
+    missing_required_skills: list[str],
+    matched_preferred_skills: list[str],
+    missing_preferred_skills: list[str],
+) -> AIAnalysisResponse:
 
-    prompt = f"""
-        You are an AI career assistant.
-
-        Analyze the following job description and candidate skills.
-
-        Return your response ONLY as valid JSON.
-
-        Job Description:
-        {job_description}
-
-        Candidate Skills:
-        {candidate_skills}
-
-        JSON format:
-        {{
-        "summary": "short summary",
-        "strengths": [
-            "strength 1",
-            "strength 2"
-        ],
-        "missing_requirements": [
-            "missing skill 1",
-            "missing skill 2"
-        ],
-        "recommendations": [
-            "recommendation 1",
-            "recommendation 2"
-        ]
-        }}
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+    prompt = build_analysis_prompt(
+        match_score=match_score,
+        matched_required_skills=matched_required_skills,
+        missing_required_skills=missing_required_skills,
+        matched_preferred_skills=matched_preferred_skills,
+        missing_preferred_skills=missing_preferred_skills,
     )
 
-    ai_response = response.choices[0].message.content
+    try:
+        response = client.beta.chat.completions.parse(
+            model=settings.AI_ANALYSIS_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": AI_ANALYSIS_SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            response_format=AIAnalysisResponse,
+        )
 
-    parsed_response = json.loads(ai_response)
+        message = response.choices[0].message
 
-    return parsed_response
+        if message.refusal:
+            raise AIAnalysisError(
+                "The AI provider refused to generate an analysis."
+            )
+
+        if message.parsed is None:
+            raise AIAnalysisError(
+                "The AI response could not be parsed."
+            )
+
+        return message.parsed
+
+    except (AIAnalysisError, OpenAIError):
+        return AIAnalysisResponse(
+            summary=(
+                "AI recommendations are temporarily unavailable. "
+                "Your deterministic skill-match results are still available."
+            ),
+            recommendations=[
+                "Review the missing required skills shown above.",
+                "Try generating AI recommendations again later.",
+            ],
+        )

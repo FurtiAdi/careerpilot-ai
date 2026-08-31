@@ -13,6 +13,8 @@ export default function HistoryPage() {
 
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] =
+    useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -28,14 +30,17 @@ export default function HistoryPage() {
 
   const fetchAnalyses = async () => {
     try {
+      setError(null)
+
       const data = await getAnalyses()
 
       setAnalyses(data)
     } catch (error) {
-      console.error(error)
-
-      localStorage.removeItem("token")
-      router.push("/login")
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load analyses."
+      )
     } finally {
       setLoading(false)
     }
@@ -45,6 +50,8 @@ export default function HistoryPage() {
     id: number
   ) => {
     try {
+      setError(null)
+
       await deleteAnalysisById(id)
 
       setAnalyses((prev) =>
@@ -54,7 +61,11 @@ export default function HistoryPage() {
         )
       )
     } catch (error) {
-      console.error(error)
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete analysis."
+      )
     }
   }
 
@@ -83,6 +94,21 @@ export default function HistoryPage() {
           Analysis History
         </h1>
 
+        {error && (
+          <div
+            className="
+              mb-6
+              rounded-2xl
+              border border-red-500/30
+              bg-red-500/10
+              px-5 py-4
+              text-red-200
+            "
+          >
+            {error}
+          </div>
+        )}
+
         <div className="grid gap-6">
 
           {loading && (
@@ -95,7 +121,7 @@ export default function HistoryPage() {
 
           )}
 
-          {analyses.length === 0 && (
+          {!loading && analyses.length === 0 && (
 
             <div
               className="
