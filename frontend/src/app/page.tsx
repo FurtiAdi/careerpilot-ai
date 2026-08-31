@@ -7,6 +7,10 @@ import {
   AnalyzeJobResponse,
 } from "@/services/analysisService"
 import ResumeUpload from "@/components/ResumeUpload"
+import MatchScoreCard from "@/components/analysis/MatchScoreCard"
+import SkillMatchSection from "@/components/analysis/SkillMatchSection"
+import AIFeedbackSection from "@/components/analysis/AIFeedbackSection"
+
 
 export default function Home() {
 
@@ -27,6 +31,9 @@ export default function Home() {
   const [results, setResults] =
     useState<AnalyzeJobResponse | null>(null)
 
+  const [error, setError] = 
+    useState<string | null>(null)
+
   // Reference used for auto-scrolling to results section
   const resultsRef = useRef<HTMLDivElement | null>(null)
 
@@ -35,6 +42,7 @@ export default function Home() {
 
   // Stores extracted resume text
   const [resumeText, setResumeText] = useState("")
+  
 
 
   // =========================
@@ -60,6 +68,8 @@ export default function Home() {
     }
 
     try {
+      setError(null)
+
       // Enable loading state      
       setLoading(true)
 
@@ -91,8 +101,11 @@ export default function Home() {
 
     } catch (error) {
 
-      // Print errors in console
-      console.error(error)
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to analyze the job."
+      )
 
     } finally {
 
@@ -122,6 +135,7 @@ export default function Home() {
 
     try {
 
+      setError(null)
       const data = await uploadResumeFile(file)
 
       // Save extracted resume text
@@ -134,9 +148,11 @@ export default function Home() {
 
     } catch (error) {
 
-      // Print errors in console
-      console.error(error)
-
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload the resume."
+      )
     }
   }
 
@@ -249,6 +265,20 @@ export default function Home() {
 
         </div>
 
+        {error && (
+          <div
+            className="
+              mb-6
+              rounded-2xl
+              border border-red-500/30
+              bg-red-500/10
+              px-5 py-4
+              text-red-200
+            "
+          >
+            {error}
+          </div>
+        )}
 
         {/* =========================
             FORM SECTION
@@ -368,114 +398,9 @@ export default function Home() {
 
 
               {/* Match Score Card */}
-              <div className="bg-black/30 rounded-2xl p-6">
-
-                <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                  📊 Match Score
-                </h3>
-
-                <div className="flex flex-col items-center justify-center">
-
-                  {/* Circle Container */}
-                  <div className="relative w-52 h-52">
-
-                    {/* Background Circle */}
-                    <svg
-                      className="w-full h-full rotate-[-90deg]"
-                      viewBox="0 0 200 200"
-                    >
-
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="85"
-                        stroke="rgba(255,255,255,0.08)"
-                        strokeWidth="14"
-                        fill="none"
-                      />
-
-                      {/* Progress Circle */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="85"
-                        stroke="url(#gradient)"
-                        strokeWidth="14"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeDasharray={534}
-                        strokeDashoffset={
-                          534 -
-                          (534 *
-                            results.match_analysis.match_score) /
-                            100
-                        }
-                        className="
-                          transition-all
-                          duration-[2000ms]
-                          ease-out
-                        "
-                      />
-
-                      {/* Gradient */}
-                      <defs>
-
-                        <linearGradient
-                          id="gradient"
-                          x1="0%"
-                          y1="0%"
-                          x2="100%"
-                          y2="100%"
-                        >
-
-                          <stop
-                            offset="0%"
-                            stopColor="#a855f7"
-                          />
-
-                          <stop
-                            offset="100%"
-                            stopColor="#ec4899"
-                          />
-
-                        </linearGradient>
-
-                      </defs>
-
-                    </svg>
-
-                    {/* Center Score */}
-                    <div
-                      className="
-                        absolute inset-0
-                        flex flex-col
-                        items-center justify-center
-                      "
-                    >
-
-                      <p className="text-gray-400 text-sm mb-2">
-                        Match Score
-                      </p>
-
-                      <h2
-                        className="
-                          text-5xl font-bold
-                          bg-gradient-to-r
-                          from-purple-300
-                          to-pink-400
-                          text-transparent bg-clip-text
-                        "
-                      >
-                        {results.match_analysis.match_score}%
-                      </h2>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
+              <MatchScoreCard
+                score={results.match_analysis.match_score}
+              />
 
             </div>
 
@@ -483,199 +408,20 @@ export default function Home() {
                 SKILL MATCHING
             ========================= */}
 
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-
-              {/* Required Skills */}
-              <div className="bg-black/30 rounded-2xl p-6">
-
-                <h3 className="text-xl font-bold mb-6 text-green-400">
-                  ✅ Required Skills
-                </h3>
-
-                <div className="space-y-6">
-
-                  {/* Matched Required */}
-                  <div>
-                    <p className="text-sm text-gray-400 mb-3">
-                      Matched
-                    </p>
-
-                    <div className="flex flex-wrap gap-3">
-
-                      {results.match_analysis.matched_required_skills.length > 0 ? (
-
-                        results.match_analysis.matched_required_skills.map(
-                          (skill: string) => (
-
-                            <div
-                              key={skill}
-                              className="
-                                px-4 py-2 rounded-full
-                                bg-green-500/10
-                                border border-green-500/20
-                                text-green-300
-                                text-sm font-medium
-                              "
-                            >
-                              {skill}
-                            </div>
-
-                          )
-                        )
-
-                      ) : (
-
-                        <p className="text-gray-500">
-                          No required skills matched.
-                        </p>
-
-                      )}
-
-                    </div>
-                  </div>
-
-
-                  {/* Missing Required */}
-                  <div>
-
-                    <p className="text-sm text-gray-400 mb-3">
-                      Missing
-                    </p>
-
-                    <div className="flex flex-wrap gap-3">
-
-                      {results.match_analysis.missing_required_skills.length > 0 ? (
-
-                        results.match_analysis.missing_required_skills.map(
-                          (skill: string) => (
-
-                            <div
-                              key={skill}
-                              className="
-                                px-4 py-2 rounded-full
-                                bg-red-500/10
-                                border border-red-500/20
-                                text-red-300
-                                text-sm font-medium
-                              "
-                            >
-                              {skill}
-                            </div>
-
-                          )
-                        )
-
-                      ) : (
-
-                        <p className="text-gray-500">
-                          No missing required skills.
-                        </p>
-
-                      )}
-
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-
-              {/* Preferred Skills */}
-              <div className="bg-black/30 rounded-2xl p-6">
-
-                <h3 className="text-xl font-bold mb-6 text-blue-400">
-                  ⭐ Preferred Skills
-                </h3>
-
-                <div className="space-y-6">
-
-                  {/* Matched Preferred */}
-                  <div>
-
-                    <p className="text-sm text-gray-400 mb-3">
-                      Matched
-                    </p>
-
-                    <div className="flex flex-wrap gap-3">
-
-                      {results.match_analysis.matched_preferred_skills.length > 0 ? (
-
-                        results.match_analysis.matched_preferred_skills.map(
-                          (skill: string) => (
-
-                            <div
-                              key={skill}
-                              className="
-                                px-4 py-2 rounded-full
-                                bg-green-500/10
-                                border border-green-500/20
-                                text-green-300
-                                text-sm font-medium
-                              "
-                            >
-                              {skill}
-                            </div>
-
-                          )
-                        )
-
-                      ) : (
-
-                        <p className="text-gray-500">
-                          No preferred skills matched.
-                        </p>
-
-                      )}
-
-                    </div>
-                  </div>
-
-
-                  {/* Missing Preferred */}
-                  <div>
-
-                    <p className="text-sm text-gray-400 mb-3">
-                      Missing
-                    </p>
-
-                    <div className="flex flex-wrap gap-3">
-
-                      {results.match_analysis.missing_preferred_skills.length > 0 ? (
-
-                        results.match_analysis.missing_preferred_skills.map(
-                          (skill: string) => (
-
-                            <div
-                              key={skill}
-                              className="
-                                px-4 py-2 rounded-full
-                                bg-yellow-500/10
-                                border border-yellow-500/20
-                                text-yellow-300
-                                text-sm font-medium
-                              "
-                            >
-                              {skill}
-                            </div>
-
-                          )
-                        )
-
-                      ) : (
-
-                        <p className="text-gray-500">
-                          No missing preferred skills.
-                        </p>
-
-                      )}
-
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-            </div>
+            <SkillMatchSection
+              matchedRequired={
+                results.match_analysis.matched_required_skills
+              }
+              missingRequired={
+                results.match_analysis.missing_required_skills
+              }
+              matchedPreferred={
+                results.match_analysis.matched_preferred_skills
+              }
+              missingPreferred={
+                results.match_analysis.missing_preferred_skills
+              }
+            />
 
 
             {/* =========================
@@ -695,100 +441,9 @@ export default function Home() {
               </div>
 
               {/* AI Generated Text */}
-              <div className="space-y-10">
-
-                {/* Summary Section */}
-                <div>
-
-                  <h4 className="text-2xl font-semibold mb-4 text-white">
-                    Summary
-                  </h4>
-
-                  <p className="max-w-4xl text-gray-300 leading-9 text-lg">
-                    {results.ai_analysis.summary}
-                  </p>
-
-                </div>
-
-                
-
-
-                {/* Strengths Section */}
-                <div>
-
-                  <h4 className="text-2xl font-semibold mb-4 text-green-400">
-                    Strengths
-                  </h4>
-
-                  <div className="grid gap-4">
-
-                    {results.ai_analysis.strengths.map(
-                      (item: string) => (
-
-                        <div
-                          key={item}
-                          className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 text-gray-200"
-                        >
-                          ✅ {item}
-                        </div>
-
-                      )
-                    )}
-                  </div>
-                </div>
-
-
-                {/* Missing Requirements Section */}
-                <div>
-
-                  <h4 className="text-2xl font-semibold mb-4 text-red-400">
-                    Missing Requirements
-                  </h4>
-
-                  <div className="grid gap-4">
-
-                    {results.ai_analysis.missing_requirements.map(
-                      (item: string) => (
-
-                        <div
-                          key={item}
-                          className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-gray-200"
-                        >
-                          ❌ {item}
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-
-
-                {/* Recommendations Section */}
-                <div>
-
-                  <h4 className="text-2xl font-semibold mb-4 text-purple-300">
-                    Recommendations
-                  </h4>
-
-                  <div className="grid gap-4">
-
-                    {results.ai_analysis.recommendations.map(
-                      (item: string) => (
-
-                        <div
-                          key={item}
-                          className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4 text-gray-200"
-                        >
-                          💡 {item}
-                        </div>
-
-                      )
-                    )}
-
-                  </div>
-
-                </div>
-
-              </div>
+              <AIFeedbackSection
+                analysis={results.ai_analysis}
+              />
 
             </div>
 
