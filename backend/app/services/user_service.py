@@ -2,6 +2,8 @@ import os
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+
 from app.models.user_model import User
 
 from app.services.auth_service import (
@@ -69,18 +71,26 @@ def register_user(
 
     resume_filename = None
     profile_picture_filename = None
+    resume_file_path = None
+    profile_picture_file_path = None    
 
     if resume_content:
 
         os.makedirs(
-            "uploads/resumes",
+            settings.RESUME_DIR,
             exist_ok=True,
         )
 
         resume_filename = generate_resume_filename()
+        resume_file_path = (
+            os.path.join(
+                settings.RESUME_DIR,
+                resume_filename,
+            )
+        )
 
         with open(
-            f"uploads/resumes/{resume_filename}",
+            resume_file_path,
             "wb"
         ) as buffer:
 
@@ -91,7 +101,7 @@ def register_user(
         and profile_picture_content_type
     ):
         os.makedirs(
-            "uploads/profile_pictures",
+            settings.PROFILE_PICTURE_DIR,
             exist_ok=True,
         )
 
@@ -101,8 +111,15 @@ def register_user(
             )
         )
 
+        profile_picture_file_path = (
+            os.path.join(
+                settings.PROFILE_PICTURE_DIR,
+                profile_picture_filename,
+            )
+        )
+
         with open(
-            f"uploads/profile_pictures/{profile_picture_filename}",
+            profile_picture_file_path,
             "wb"
         ) as buffer:
             buffer.write(
@@ -128,6 +145,17 @@ def register_user(
         db.commit()
     except Exception:
         db.rollback()
+
+        for file_path in (
+            resume_file_path,
+            profile_picture_file_path,
+        ):
+            if (
+                file_path
+                and os.path.isfile(file_path)
+            ):
+                os.remove(file_path)
+
         raise
 
     db.refresh(new_user)

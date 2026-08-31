@@ -11,6 +11,7 @@ from app.services.upload_validation import (
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.analysis_model import Analysis
 from app.models.user_model import User
 
@@ -38,7 +39,8 @@ async def save_profile_picture(
     file_content = await read_validated_profile_image(
         file
     )
-    upload_dir = "uploads/profile_pictures"
+
+    upload_dir = settings.PROFILE_PICTURE_DIR
 
     os.makedirs(
         upload_dir,
@@ -59,6 +61,10 @@ async def save_profile_picture(
     ) as buffer:
         buffer.write(file_content)
 
+    old_filename = (
+        current_user.profile_picture_filename
+    )
+    
     current_user.profile_picture_filename = (
         unique_filename
     )
@@ -69,6 +75,18 @@ async def save_profile_picture(
         db.rollback()
         raise
 
+    if (
+        old_filename
+        and old_filename != unique_filename
+    ):
+        old_file_path = os.path.join(
+            upload_dir,
+            old_filename,
+        )
+
+        if os.path.isfile(old_file_path):
+            os.remove(old_file_path)
+            
     return {
         "profile_picture_filename":
             unique_filename
