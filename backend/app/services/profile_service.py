@@ -1,7 +1,9 @@
 import os
 import shutil
 
-from uuid import uuid4
+from app.services.upload_filenames import (
+    generate_profile_picture_filename,
+)
 
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
@@ -37,12 +39,8 @@ def save_profile_picture(
         exist_ok=True
     )
 
-    file_extension = (
-        file.filename.split(".")[-1]
-    )
-
-    unique_filename = (
-        f"{uuid4()}.{file_extension}"
+    unique_filename = generate_profile_picture_filename(
+        file
     )
 
     file_path = (

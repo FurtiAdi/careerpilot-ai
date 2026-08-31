@@ -1,3 +1,4 @@
+import os
 import shutil
 
 from fastapi import UploadFile
@@ -9,6 +10,10 @@ from app.services.auth_service import (
     hash_password,
     verify_password,
     create_access_token
+)
+
+from app.services.upload_filenames import (
+    generate_profile_picture_filename,
 )
 
 
@@ -81,8 +86,15 @@ def register_user(
 
     if profile_picture:
 
+        os.makedirs(
+            "uploads/profile_pictures",
+            exist_ok=True,
+        )
+
         profile_picture_filename = (
-            profile_picture.filename
+            generate_profile_picture_filename(
+                profile_picture
+            )
         )
 
         with open(
