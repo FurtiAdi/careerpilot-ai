@@ -92,6 +92,55 @@ def get_profile_picture(
     return FileResponse(file_path)
 
 
+@router.get("/resume")
+def get_resume(
+    current_user: User = Depends(
+        get_current_user
+    )
+):
+    filename = current_user.resume_filename
+
+    if not filename:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found.",
+        )
+
+    upload_directory = os.path.abspath(
+        os.path.join(
+            "uploads",
+            "resumes",
+        )
+    )
+
+    file_path = os.path.abspath(
+        os.path.join(
+            upload_directory,
+            filename,
+        )
+    )
+
+    if not file_path.startswith(
+        upload_directory + os.sep
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found.",
+        )
+
+    if not os.path.isfile(file_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found.",
+        )
+
+    return FileResponse(
+        file_path,
+        media_type="application/pdf",
+        filename="resume.pdf",
+    )
+
+
 @router.get("/profile-stats")
 def get_profile_stats_route(
     db: Session = Depends(get_db),
