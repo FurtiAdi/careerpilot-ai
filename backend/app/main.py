@@ -8,20 +8,11 @@ from app.routes.auth_routes import router as auth_router
 from app.routes.profile_routes import router as profile_router
 from app.routes.resume_routes import router as resume_router
 from app.models.user_model import User
-from fastapi.staticfiles import StaticFiles
-
 
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-app.mount(
-    "/uploads",
-    StaticFiles(directory="uploads"),
-    name="uploads"
-)
-
 
 app.add_middleware(
     CORSMiddleware,
