@@ -1,9 +1,15 @@
 from openai import OpenAI, OpenAIError
 
 from app.models.ai_schema import AIAnalysisResponse
+from app.models.tailored_resume_schema import (
+    TailoredResumeAIResponse,
+    TailoredResumeContent,
+)
 from app.services.ai_prompts import (
     AI_ANALYSIS_SYSTEM_PROMPT,
+    TAILORED_RESUME_SYSTEM_PROMPT,
     build_analysis_prompt,
+    build_tailored_resume_prompt,
 )
 
 from app.core.config import settings
@@ -16,6 +22,10 @@ client = OpenAI(
 
 class AIAnalysisError(Exception):
     """Raised when the AI response cannot be used safely."""
+
+
+class TailoredResumeGenerationError(Exception):
+    """Raised when a tailored resume cannot be generated safely."""
 
 
 def generate_ai_analysis(
@@ -75,3 +85,50 @@ def generate_ai_analysis(
                 "Try generating AI recommendations again later.",
             ],
         )
+
+
+def generate_tailored_resume(
+    resume_content: TailoredResumeContent,
+    job_description: str,
+    match_snapshot: dict[str, object],
+) -> TailoredResumeAIResponse:
+    prompt = build_tailored_resume_prompt(
+        resume_content=resume_content,
+        job_description=job_description,
+        match_snapshot=match_snapshot,
+    )
+
+    try:
+        response = client.beta.chat.completions.parse(
+            model=settings.AI_ANALYSIS_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": TAILORED_RESUME_SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            response_format=TailoredResumeAIResponse,
+        )
+
+        message = response.choices[0].message
+
+        if message.refusal:
+            raise TailoredResumeGenerationError(
+                "The AI provider refused to tailor the resume."
+            )
+
+        if message.parsed is None:
+            raise TailoredResumeGenerationError(
+                "The tailored resume response could not be parsed."
+            )
+
+        return message.parsed
+
+    except OpenAIError as exc:
+        raise TailoredResumeGenerationError(
+            "Tailored resume generation is temporarily unavailable."
+        ) from exc
