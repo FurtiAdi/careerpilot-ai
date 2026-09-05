@@ -76,6 +76,20 @@ class TailoredResume(Base):
         nullable=False,
     )
 
+    emphasized_items = Column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default="[]",
+    )
+
+    reordered_items = Column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default="[]",
+    )
+
     match_snapshot = Column(
         JSON,
         nullable=False,
