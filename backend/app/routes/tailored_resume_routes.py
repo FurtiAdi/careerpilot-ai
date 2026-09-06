@@ -1,0 +1,78 @@
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
+from sqlalchemy.orm import Session
+
+from app.database.database import get_db
+from app.dependencies.auth_dependencies import (
+    get_current_user,
+)
+from app.models.tailored_resume_schema import (
+    TailoredResumeGenerateRequest,
+    TailoredResumeResponse,
+)
+from app.models.user_model import User
+from app.services.ai_service import (
+    TailoredResumeGenerationError,
+)
+from app.services.tailored_resume_service import (
+    TailoredResumeGroundingError,
+    TailoredResumeSourceError,
+    create_tailored_resume_for_user,
+)
+
+
+router = APIRouter(
+    prefix="/tailored-resumes",
+    tags=["tailored-resumes"],
+)
+
+
+@router.post(
+    "",
+    response_model=TailoredResumeResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def generate_tailored_resume_draft(
+    request: TailoredResumeGenerateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        tailored_resume = create_tailored_resume_for_user(
+            analysis_id=request.analysis_id,
+            source_content=request.source_content,
+            current_user=current_user,
+            db=db,
+        )
+    except TailoredResumeSourceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="A saved source resume is required.",
+        ) from exc
+    except TailoredResumeGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Tailored resume generation is "
+                "temporarily unavailable."
+            ),
+        ) from exc
+    except TailoredResumeGroundingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "Generated resume failed grounding validation."
+            ),
+        ) from exc
+
+    if tailored_resume is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Analysis not found.",
+        )
+
+    return tailored_resume
