@@ -272,3 +272,26 @@ def create_tailored_resume_for_user(
     db.refresh(tailored_resume)
 
     return tailored_resume
+
+
+def get_user_tailored_resumes(
+    user_id: int,
+    db: Session,
+) -> list[TailoredResume]:
+    return (
+        db.query(TailoredResume)
+        .filter(TailoredResume.user_id == user_id)
+        .order_by(TailoredResume.updated_at.desc())
+        .all()
+    )
+
+
+def get_user_tailored_resume(
+    tailored_resume_id: int,
+    user_id: int,
+    db: Session,
+) -> TailoredResume | None:
+    return db.query(TailoredResume).filter(
+        TailoredResume.id == tailored_resume_id,
+        TailoredResume.user_id == user_id,
+    ).first()

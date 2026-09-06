@@ -145,3 +145,87 @@ def test_generate_tailored_resume_maps_service_errors(
         )
 
     assert exc.value.status_code == expected_status
+
+
+def test_list_tailored_resumes_requires_authentication():
+    response = client.get("/tailored-resumes")
+
+    assert response.status_code == 401
+
+
+def test_list_tailored_resumes_uses_current_user(
+    monkeypatch,
+):
+    db = MagicMock()
+    user = MagicMock()
+    user.id = 7
+    expected = [MagicMock(), MagicMock()]
+
+    mock_service = MagicMock(return_value=expected)
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "get_user_tailored_resumes",
+        mock_service,
+    )
+
+    result = tailored_resume_routes.list_tailored_resumes(
+        db=db,
+        current_user=user,
+    )
+
+    assert result == expected
+    mock_service.assert_called_once_with(
+        user_id=7,
+        db=db,
+    )
+
+
+def test_get_tailored_resume_uses_current_user(
+    monkeypatch,
+):
+    db = MagicMock()
+    user = MagicMock()
+    user.id = 7
+    expected = MagicMock()
+
+    mock_service = MagicMock(return_value=expected)
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "get_user_tailored_resume",
+        mock_service,
+    )
+
+    result = tailored_resume_routes.get_tailored_resume(
+        tailored_resume_id=12,
+        db=db,
+        current_user=user,
+    )
+
+    assert result is expected
+    mock_service.assert_called_once_with(
+        tailored_resume_id=12,
+        user_id=7,
+        db=db,
+    )
+
+
+def test_get_tailored_resume_returns_404_when_not_owned(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "get_user_tailored_resume",
+        MagicMock(return_value=None),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        tailored_resume_routes.get_tailored_resume(
+            tailored_resume_id=99,
+            db=MagicMock(),
+            current_user=MagicMock(id=7),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == (
+        "Tailored resume not found."
+    )

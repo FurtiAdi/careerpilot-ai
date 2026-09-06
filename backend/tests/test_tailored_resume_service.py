@@ -337,3 +337,45 @@ def test_create_tailored_resume_rolls_back_on_commit_error(
 
     db.rollback.assert_called_once()
     db.refresh.assert_not_called()
+
+
+def test_get_user_tailored_resumes_filters_by_user():
+    db = MagicMock()
+    expected = [MagicMock(), MagicMock()]
+
+    query = db.query.return_value
+    filtered = query.filter.return_value
+    ordered = filtered.order_by.return_value
+    ordered.all.return_value = expected
+
+    result = (
+        tailored_resume_service
+        .get_user_tailored_resumes(
+            user_id=7,
+            db=db,
+        )
+    )
+
+    assert result == expected
+    db.query.assert_called_once()
+
+
+def test_get_user_tailored_resume_filters_by_id_and_user():
+    db = MagicMock()
+    expected = MagicMock()
+
+    db.query.return_value.filter.return_value.first.return_value = (
+        expected
+    )
+
+    result = (
+        tailored_resume_service
+        .get_user_tailored_resume(
+            tailored_resume_id=12,
+            user_id=7,
+            db=db,
+        )
+    )
+
+    assert result is expected
+    db.query.assert_called_once()

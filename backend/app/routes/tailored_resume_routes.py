@@ -22,6 +22,8 @@ from app.services.tailored_resume_service import (
     TailoredResumeGroundingError,
     TailoredResumeSourceError,
     create_tailored_resume_for_user,
+    get_user_tailored_resume,
+    get_user_tailored_resumes,
 )
 
 
@@ -73,6 +75,44 @@ def generate_tailored_resume_draft(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Analysis not found.",
+        )
+
+    return tailored_resume
+
+
+@router.get(
+    "",
+    response_model=list[TailoredResumeResponse],
+)
+def list_tailored_resumes(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_user_tailored_resumes(
+        user_id=current_user.id,
+        db=db,
+    )
+
+
+@router.get(
+    "/{tailored_resume_id}",
+    response_model=TailoredResumeResponse,
+)
+def get_tailored_resume(
+    tailored_resume_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    tailored_resume = get_user_tailored_resume(
+        tailored_resume_id=tailored_resume_id,
+        user_id=current_user.id,
+        db=db,
+    )
+
+    if tailored_resume is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tailored resume not found.",
         )
 
     return tailored_resume
