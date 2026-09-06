@@ -6,6 +6,7 @@ from app.models.tailored_resume_schema import (
     TailoredResumeContent,
 )
 from app.services import resume_service
+from types import SimpleNamespace
 
 
 def make_structured_resume() -> TailoredResumeContent:
@@ -99,4 +100,91 @@ def test_build_grounded_resume_content_validates_ai_result(
     mock_validate.assert_called_once_with(
         resume_text="Verified resume text",
         structured_content=structured_content,
+    )
+
+
+def test_saved_resume_requires_filename():
+    user = SimpleNamespace(
+        resume_filename=None
+    )
+
+    with pytest.raises(
+        resume_service.SavedResumeNotFoundError,
+        match="required",
+    ):
+        resume_service.build_grounded_saved_resume_content(
+            user
+        )
+
+
+def test_saved_resume_rejects_unsafe_filename(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        resume_service.settings,
+        "RESUME_DIR",
+        str(tmp_path),
+    )
+
+    user = SimpleNamespace(
+        resume_filename="../outside.pdf"
+    )
+
+    with pytest.raises(
+        resume_service.SavedResumeNotFoundError,
+        match="not found",
+    ):
+        resume_service.build_grounded_saved_resume_content(
+            user
+        )
+
+
+def test_saved_resume_is_extracted_and_grounded(
+    tmp_path,
+    monkeypatch,
+):
+    resume_path = tmp_path / "saved-resume.pdf"
+    resume_path.write_bytes(b"%PDF-1.4 test")
+
+    monkeypatch.setattr(
+        resume_service.settings,
+        "RESUME_DIR",
+        str(tmp_path),
+    )
+
+    mock_extract = MagicMock(
+        return_value="Verified resume text"
+    )
+    structured_content = make_structured_resume()
+    mock_ground = MagicMock(
+        return_value=structured_content
+    )
+
+    monkeypatch.setattr(
+        resume_service,
+        "extract_text_from_pdf",
+        mock_extract,
+    )
+    monkeypatch.setattr(
+        resume_service,
+        "build_grounded_resume_content",
+        mock_ground,
+    )
+
+    result = (
+        resume_service
+        .build_grounded_saved_resume_content(
+            SimpleNamespace(
+                resume_filename="saved-resume.pdf"
+            )
+        )
+    )
+
+    assert result is structured_content
+    mock_extract.assert_called_once_with(
+        str(resume_path)
+    )
+    mock_ground.assert_called_once_with(
+        "Verified resume text"
     )
