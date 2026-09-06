@@ -13,6 +13,7 @@ from app.dependencies.auth_dependencies import (
 from app.models.tailored_resume_schema import (
     TailoredResumeGenerateRequest,
     TailoredResumeResponse,
+    TailoredResumeUpdateRequest,
 )
 from app.models.user_model import User
 from app.services.ai_service import (
@@ -24,6 +25,8 @@ from app.services.tailored_resume_service import (
     create_tailored_resume_for_user,
     get_user_tailored_resume,
     get_user_tailored_resumes,
+    create_user_tailored_resume_version,
+    delete_user_tailored_resume,
 )
 
 
@@ -116,3 +119,53 @@ def get_tailored_resume(
         )
 
     return tailored_resume
+
+
+@router.patch(
+    "/{tailored_resume_id}",
+    response_model=TailoredResumeResponse,
+)
+def update_tailored_resume(
+    tailored_resume_id: int,
+    request: TailoredResumeUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    updated_resume = create_user_tailored_resume_version(
+        tailored_resume_id=tailored_resume_id,
+        user_id=current_user.id,
+        content=request.content,
+        status=request.status,
+        db=db,
+    )
+
+    if updated_resume is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tailored resume not found.",
+        )
+
+    return updated_resume
+
+
+@router.delete("/{tailored_resume_id}")
+def delete_tailored_resume(
+    tailored_resume_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    deleted_resume = delete_user_tailored_resume(
+        tailored_resume_id=tailored_resume_id,
+        user_id=current_user.id,
+        db=db,
+    )
+
+    if deleted_resume is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tailored resume not found.",
+        )
+
+    return {
+        "message": "Tailored resume deleted."
+    }

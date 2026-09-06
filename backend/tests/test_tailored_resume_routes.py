@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models.tailored_resume_schema import (
     TailoredResumeGenerateRequest,
+    TailoredResumeUpdateRequest,
 )
 from app.routes import tailored_resume_routes
 from app.services.ai_service import (
@@ -220,6 +221,139 @@ def test_get_tailored_resume_returns_404_when_not_owned(
 
     with pytest.raises(HTTPException) as exc:
         tailored_resume_routes.get_tailored_resume(
+            tailored_resume_id=99,
+            db=MagicMock(),
+            current_user=MagicMock(id=7),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == (
+        "Tailored resume not found."
+    )
+
+@pytest.mark.parametrize(
+    ("method", "payload"),
+    [
+        ("PATCH", {"status": "saved"}),
+        ("DELETE", None),
+    ],
+)
+def test_write_routes_require_authentication(
+    method,
+    payload,
+):
+    response = client.request(
+        method,
+        "/tailored-resumes/12",
+        json=payload,
+    )
+
+    assert response.status_code == 401
+
+
+def test_update_tailored_resume_uses_current_user(
+    monkeypatch,
+):
+    db = MagicMock()
+    user = MagicMock()
+    user.id = 7
+    expected = MagicMock()
+
+    mock_service = MagicMock(return_value=expected)
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "create_user_tailored_resume_version",
+        mock_service,
+    )
+
+    request = TailoredResumeUpdateRequest(
+        status="saved"
+    )
+
+    result = tailored_resume_routes.update_tailored_resume(
+        tailored_resume_id=12,
+        request=request,
+        db=db,
+        current_user=user,
+    )
+
+    assert result is expected
+    mock_service.assert_called_once_with(
+        tailored_resume_id=12,
+        user_id=7,
+        content=None,
+        status="saved",
+        db=db,
+    )
+
+
+def test_update_tailored_resume_returns_404_when_not_owned(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "create_user_tailored_resume_version",
+        MagicMock(return_value=None),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        tailored_resume_routes.update_tailored_resume(
+            tailored_resume_id=99,
+            request=TailoredResumeUpdateRequest(
+                status="saved"
+            ),
+            db=MagicMock(),
+            current_user=MagicMock(id=7),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == (
+        "Tailored resume not found."
+    )
+
+
+def test_delete_tailored_resume_uses_current_user(
+    monkeypatch,
+):
+    db = MagicMock()
+    user = MagicMock()
+    user.id = 7
+    deleted = MagicMock()
+
+    mock_service = MagicMock(return_value=deleted)
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "delete_user_tailored_resume",
+        mock_service,
+    )
+
+    result = tailored_resume_routes.delete_tailored_resume(
+        tailored_resume_id=12,
+        db=db,
+        current_user=user,
+    )
+
+    assert result == {
+        "message": "Tailored resume deleted."
+    }
+    mock_service.assert_called_once_with(
+        tailored_resume_id=12,
+        user_id=7,
+        db=db,
+    )
+
+
+def test_delete_tailored_resume_returns_404_when_not_owned(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "delete_user_tailored_resume",
+        MagicMock(return_value=None),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        tailored_resume_routes.delete_tailored_resume(
             tailored_resume_id=99,
             db=MagicMock(),
             current_user=MagicMock(id=7),

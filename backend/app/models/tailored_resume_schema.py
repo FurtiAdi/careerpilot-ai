@@ -80,7 +80,7 @@ class TailoredResumeUpdateRequest(StrictSchema):
             )
 
         return self
-    
+
 
 class TailoredResumeAIResponse(StrictSchema):
     content: TailoredResumeContent
