@@ -1,5 +1,12 @@
 import re
 
+from uuid import uuid4
+
+from sqlalchemy.orm import Session
+
+from app.models.tailored_resume_model import TailoredResume
+from app.models.user_model import User
+from app.services.ai_service import generate_tailored_resume
 from app.models.tailored_resume_schema import (
     TailoredResumeContent,
 )
@@ -35,6 +42,8 @@ def build_analysis_match_snapshot(
 class TailoredResumeGroundingError(ValueError):
     """Raised when generated content violates source facts."""
 
+class TailoredResumeSourceError(ValueError):
+    """Raised when the user has no saved source resume."""
 
 NUMBER_PATTERN = re.compile(
     r"(?<!\w)\d+(?:[.,]\d+)?%?(?!\w)"
@@ -198,3 +207,68 @@ def validate_tailored_resume_grounding(
         raise TailoredResumeGroundingError(
             "Generated resume contains an unsupported quantity."
         )
+
+
+def create_tailored_resume_for_user(
+    analysis_id: int,
+    source_content: TailoredResumeContent,
+    current_user: User,
+    db: Session,
+) -> TailoredResume | None:
+    analysis = db.query(Analysis).filter(
+        Analysis.id == analysis_id,
+        Analysis.user_id == current_user.id,
+    ).first()
+
+    if analysis is None:
+        return None
+
+    if not current_user.resume_filename:
+        raise TailoredResumeSourceError(
+            "A saved source resume is required."
+        )
+
+    match_snapshot = build_analysis_match_snapshot(
+        analysis
+    )
+
+    generated = generate_tailored_resume(
+        resume_content=source_content,
+        job_description=analysis.job_description,
+        match_snapshot=match_snapshot,
+    )
+
+    validate_tailored_resume_grounding(
+        source=source_content,
+        generated=generated.content,
+        match_snapshot=match_snapshot,
+    )
+
+    tailored_resume = TailoredResume(
+        user_id=current_user.id,
+        source_analysis_id=analysis.id,
+        source_resume_filename=(
+            current_user.resume_filename
+        ),
+        version_group_id=str(uuid4()),
+        version_number=1,
+        status="draft",
+        content=generated.content.model_dump(
+            mode="json"
+        ),
+        emphasized_items=generated.emphasized_items,
+        reordered_items=generated.reordered_items,
+        match_snapshot=match_snapshot,
+    )
+
+    db.add(tailored_resume)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(tailored_resume)
+
+    return tailored_resume

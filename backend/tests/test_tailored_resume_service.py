@@ -1,6 +1,7 @@
 import pytest
 
 from app.models.tailored_resume_schema import (
+    TailoredResumeAIResponse,
     TailoredResumeContent,
 )
 from types import SimpleNamespace
@@ -159,3 +160,180 @@ def test_build_match_snapshot_uses_stored_analysis(
         preferred_skills=["docker"],
         candidate_skills=["Python", "FastAPI"],
     )
+
+
+def test_create_tailored_resume_persists_grounded_result(
+    monkeypatch,
+):
+    db = MagicMock()
+    user = SimpleNamespace(
+        id=7,
+        resume_filename="saved-resume.pdf",
+    )
+    analysis = SimpleNamespace(
+        id=12,
+        user_id=7,
+        job_description="Python role",
+        candidate_skills="Python",
+    )
+
+    db.query.return_value.filter.return_value.first.return_value = (
+        analysis
+    )
+
+    source = make_grounding_source()
+    generated = TailoredResumeAIResponse(
+        content=source,
+        emphasized_items=["Python"],
+        reordered_items=["Experience"],
+    )
+    snapshot = {
+        "match_score": 80,
+        "missing_required_skills": [],
+        "missing_preferred_skills": [],
+    }
+
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "build_analysis_match_snapshot",
+        MagicMock(return_value=snapshot),
+    )
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "generate_tailored_resume",
+        MagicMock(return_value=generated),
+    )
+    mock_validate = MagicMock()
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "validate_tailored_resume_grounding",
+        mock_validate,
+    )
+
+    result = (
+        tailored_resume_service
+        .create_tailored_resume_for_user(
+            analysis_id=12,
+            source_content=source,
+            current_user=user,
+            db=db,
+        )
+    )
+
+    assert result.user_id == 7
+    assert result.source_analysis_id == 12
+    assert result.source_resume_filename == (
+        "saved-resume.pdf"
+    )
+    assert result.content == source.model_dump(
+        mode="json"
+    )
+    assert result.emphasized_items == ["Python"]
+    assert result.reordered_items == ["Experience"]
+    assert result.match_snapshot == snapshot
+
+    db.add.assert_called_once_with(result)
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once_with(result)
+
+    mock_validate.assert_called_once_with(
+        source=source,
+        generated=generated.content,
+        match_snapshot=snapshot,
+    )
+
+
+def test_create_tailored_resume_rejects_non_owned_analysis(
+    monkeypatch,
+):
+    db = MagicMock()
+    db.query.return_value.filter.return_value.first.return_value = (
+        None
+    )
+
+    mock_generate = MagicMock()
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "generate_tailored_resume",
+        mock_generate,
+    )
+
+    result = (
+        tailored_resume_service
+        .create_tailored_resume_for_user(
+            analysis_id=99,
+            source_content=make_grounding_source(),
+            current_user=SimpleNamespace(
+                id=7,
+                resume_filename="saved-resume.pdf",
+            ),
+            db=db,
+        )
+    )
+
+    assert result is None
+    mock_generate.assert_not_called()
+    db.add.assert_not_called()
+    db.commit.assert_not_called()
+
+
+def test_create_tailored_resume_rolls_back_on_commit_error(
+    monkeypatch,
+):
+    db = MagicMock()
+    db.commit.side_effect = Exception(
+        "Database error"
+    )
+
+    user = SimpleNamespace(
+        id=7,
+        resume_filename="saved-resume.pdf",
+    )
+    analysis = SimpleNamespace(
+        id=12,
+        user_id=7,
+        job_description="Python role",
+        candidate_skills="Python",
+    )
+
+    db.query.return_value.filter.return_value.first.return_value = (
+        analysis
+    )
+
+    source = make_grounding_source()
+    generated = TailoredResumeAIResponse(
+        content=source
+    )
+
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "build_analysis_match_snapshot",
+        MagicMock(return_value={}),
+    )
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "generate_tailored_resume",
+        MagicMock(return_value=generated),
+    )
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "validate_tailored_resume_grounding",
+        MagicMock(),
+    )
+
+    with pytest.raises(
+        Exception,
+        match="Database error",
+    ):
+        (
+            tailored_resume_service
+            .create_tailored_resume_for_user(
+                analysis_id=12,
+                source_content=source,
+                current_user=user,
+                db=db,
+            )
+        )
+
+    db.rollback.assert_called_once()
+    db.refresh.assert_not_called()
