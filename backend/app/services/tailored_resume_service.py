@@ -17,7 +17,9 @@ from app.skills.requirements import (
     classify_skill_requirements,
 )
 from app.skills.scorer import calculate_match_score
-
+from app.services.resume_service import (
+    build_grounded_saved_resume_content,
+)
 
 def build_analysis_match_snapshot(
     analysis: Analysis,
@@ -42,9 +44,6 @@ def build_analysis_match_snapshot(
 
 class TailoredResumeGroundingError(ValueError):
     """Raised when generated content violates source facts."""
-
-class TailoredResumeSourceError(ValueError):
-    """Raised when the user has no saved source resume."""
 
 NUMBER_PATTERN = re.compile(
     r"(?<!\w)\d+(?:[.,]\d+)?%?(?!\w)"
@@ -212,7 +211,6 @@ def validate_tailored_resume_grounding(
 
 def create_tailored_resume_for_user(
     analysis_id: int,
-    source_content: TailoredResumeContent,
     current_user: User,
     db: Session,
 ) -> TailoredResume | None:
@@ -224,10 +222,11 @@ def create_tailored_resume_for_user(
     if analysis is None:
         return None
 
-    if not current_user.resume_filename:
-        raise TailoredResumeSourceError(
-            "A saved source resume is required."
+    source_content = (
+        build_grounded_saved_resume_content(
+            current_user
         )
+    )
 
     match_snapshot = build_analysis_match_snapshot(
         analysis

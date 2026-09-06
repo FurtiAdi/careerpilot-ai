@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from app.services.tailored_resume_service import TailoredResumeGroundingError
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
@@ -13,9 +14,9 @@ from app.routes import tailored_resume_routes
 from app.services.ai_service import (
     TailoredResumeGenerationError,
 )
-from app.services.tailored_resume_service import (
-    TailoredResumeGroundingError,
-    TailoredResumeSourceError,
+
+from app.services.resume_service import (
+    SavedResumeNotFoundError,
 )
 
 
@@ -24,13 +25,7 @@ client = TestClient(app)
 
 def make_request() -> TailoredResumeGenerateRequest:
     return TailoredResumeGenerateRequest(
-        analysis_id=12,
-        source_content={
-            "contact": {
-                "full_name": "Ada Lovelace",
-            },
-            "skills": ["Python"],
-        },
+        analysis_id=12
     )
 
 
@@ -39,11 +34,6 @@ def test_generate_tailored_resume_requires_authentication():
         "/tailored-resumes",
         json={
             "analysis_id": 12,
-            "source_content": {
-                "contact": {
-                    "full_name": "Ada Lovelace",
-                }
-            },
         },
     )
 
@@ -78,7 +68,6 @@ def test_generate_tailored_resume_calls_scoped_service(
     assert result is generated_resume
     mock_service.assert_called_once_with(
         analysis_id=12,
-        source_content=make_request().source_content,
         current_user=user,
         db=db,
     )
@@ -111,7 +100,7 @@ def test_generate_tailored_resume_returns_404_for_missing_analysis(
     ("service_error", "expected_status"),
     [
         (
-            TailoredResumeSourceError("Missing resume"),
+            SavedResumeNotFoundError(),
             422,
         ),
         (

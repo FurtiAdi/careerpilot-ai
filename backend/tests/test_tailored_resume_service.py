@@ -193,6 +193,14 @@ def test_create_tailored_resume_persists_grounded_result(
         "missing_preferred_skills": [],
     }
 
+    mock_source_loader = MagicMock(
+        return_value=source
+    )
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "build_grounded_saved_resume_content",
+        mock_source_loader,
+    )
     monkeypatch.setattr(
         tailored_resume_service,
         "build_analysis_match_snapshot",
@@ -214,7 +222,6 @@ def test_create_tailored_resume_persists_grounded_result(
         tailored_resume_service
         .create_tailored_resume_for_user(
             analysis_id=12,
-            source_content=source,
             current_user=user,
             db=db,
         )
@@ -241,6 +248,9 @@ def test_create_tailored_resume_persists_grounded_result(
         generated=generated.content,
         match_snapshot=snapshot,
     )
+    mock_source_loader.assert_called_once_with(
+        user
+    )
 
 
 def test_create_tailored_resume_rejects_non_owned_analysis(
@@ -258,11 +268,17 @@ def test_create_tailored_resume_rejects_non_owned_analysis(
         mock_generate,
     )
 
+    mock_source_loader = MagicMock()
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "build_grounded_saved_resume_content",
+        mock_source_loader,
+    )
+
     result = (
         tailored_resume_service
         .create_tailored_resume_for_user(
             analysis_id=99,
-            source_content=make_grounding_source(),
             current_user=SimpleNamespace(
                 id=7,
                 resume_filename="saved-resume.pdf",
@@ -272,6 +288,7 @@ def test_create_tailored_resume_rejects_non_owned_analysis(
     )
 
     assert result is None
+    mock_source_loader.assert_not_called()
     mock_generate.assert_not_called()
     db.add.assert_not_called()
     db.commit.assert_not_called()
@@ -307,6 +324,12 @@ def test_create_tailored_resume_rolls_back_on_commit_error(
 
     monkeypatch.setattr(
         tailored_resume_service,
+        "build_grounded_saved_resume_content",
+        MagicMock(return_value=source),
+    )
+
+    monkeypatch.setattr(
+        tailored_resume_service,
         "build_analysis_match_snapshot",
         MagicMock(return_value={}),
     )
@@ -329,7 +352,6 @@ def test_create_tailored_resume_rolls_back_on_commit_error(
             tailored_resume_service
             .create_tailored_resume_for_user(
                 analysis_id=12,
-                source_content=source,
                 current_user=user,
                 db=db,
             )

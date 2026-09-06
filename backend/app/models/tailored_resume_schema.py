@@ -94,7 +94,6 @@ class TailoredResumeAIResponse(StrictSchema):
 
 class TailoredResumeGenerateRequest(StrictSchema):
     analysis_id: int = Field(gt=0)
-    source_content: TailoredResumeContent
 
 
 class TailoredResumeResponse(StrictSchema):

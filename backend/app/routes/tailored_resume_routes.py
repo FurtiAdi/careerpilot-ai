@@ -21,12 +21,14 @@ from app.services.ai_service import (
 )
 from app.services.tailored_resume_service import (
     TailoredResumeGroundingError,
-    TailoredResumeSourceError,
     create_tailored_resume_for_user,
     get_user_tailored_resume,
     get_user_tailored_resumes,
     create_user_tailored_resume_version,
     delete_user_tailored_resume,
+)
+from app.services.resume_service import (
+    SavedResumeNotFoundError,
 )
 
 
@@ -49,11 +51,10 @@ def generate_tailored_resume_draft(
     try:
         tailored_resume = create_tailored_resume_for_user(
             analysis_id=request.analysis_id,
-            source_content=request.source_content,
             current_user=current_user,
             db=db,
         )
-    except TailoredResumeSourceError as exc:
+    except SavedResumeNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="A saved source resume is required.",

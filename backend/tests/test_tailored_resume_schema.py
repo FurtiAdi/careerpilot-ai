@@ -56,10 +56,17 @@ def test_tailored_resume_response_rejects_unknown_fields():
 def test_generate_request_rejects_invalid_analysis_id():
     with pytest.raises(ValidationError):
         TailoredResumeGenerateRequest(
-            analysis_id=0,
+            analysis_id=0
+        )
+
+
+def test_generate_request_rejects_client_source_content():
+    with pytest.raises(ValidationError):
+        TailoredResumeGenerateRequest(
+            analysis_id=12,
             source_content={
                 "contact": {
-                    "full_name": "Ada Lovelace"
+                    "full_name": "Unverified User"
                 }
             },
         )
