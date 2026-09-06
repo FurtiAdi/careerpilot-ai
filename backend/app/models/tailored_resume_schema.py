@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -69,3 +71,29 @@ class TailoredResumeAIResponse(StrictSchema):
     reordered_items: list[str] = Field(
         default_factory=list
     )
+
+
+class TailoredResumeGenerateRequest(StrictSchema):
+    analysis_id: int = Field(gt=0)
+    source_content: TailoredResumeContent
+
+
+class TailoredResumeResponse(StrictSchema):
+    model_config = ConfigDict(
+        extra="forbid",
+        from_attributes=True,
+    )
+
+    id: int
+    user_id: int
+    source_analysis_id: int
+    source_resume_filename: str
+    version_group_id: str
+    version_number: int
+    status: Literal["draft", "saved"]
+    content: TailoredResumeContent
+    emphasized_items: list[str]
+    reordered_items: list[str]
+    match_snapshot: dict[str, object]
+    created_at: datetime
+    updated_at: datetime

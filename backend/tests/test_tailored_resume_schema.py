@@ -1,8 +1,12 @@
 import pytest
 from pydantic import ValidationError
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
 from app.models.tailored_resume_schema import (
     TailoredResumeAIResponse,
+    TailoredResumeGenerateRequest,
+    TailoredResumeResponse,
 )
 
 
@@ -46,3 +50,52 @@ def test_tailored_resume_response_rejects_unknown_fields():
                 ],
             }
         )
+
+
+def test_generate_request_rejects_invalid_analysis_id():
+    with pytest.raises(ValidationError):
+        TailoredResumeGenerateRequest(
+            analysis_id=0,
+            source_content={
+                "contact": {
+                    "full_name": "Ada Lovelace"
+                }
+            },
+        )
+
+
+def test_tailored_resume_response_serializes_orm_record():
+    now = datetime.now(timezone.utc)
+
+    record = SimpleNamespace(
+        id=4,
+        user_id=7,
+        source_analysis_id=12,
+        source_resume_filename="saved-resume.pdf",
+        version_group_id="version-group",
+        version_number=1,
+        status="draft",
+        content={
+            "contact": {
+                "full_name": "Ada Lovelace",
+            },
+            "skills": ["Python"],
+        },
+        emphasized_items=["Python"],
+        reordered_items=["Experience"],
+        match_snapshot={
+            "match_score": 80,
+            "missing_required_skills": ["docker"],
+        },
+        created_at=now,
+        updated_at=now,
+    )
+
+    response = TailoredResumeResponse.model_validate(
+        record
+    )
+
+    assert response.id == 4
+    assert response.user_id == 7
+    assert response.content.skills == ["Python"]
+    assert response.status == "draft"
