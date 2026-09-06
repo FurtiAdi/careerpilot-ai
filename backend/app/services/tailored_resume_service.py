@@ -3,6 +3,7 @@ import re
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.models.tailored_resume_model import TailoredResume
 from app.models.user_model import User
@@ -295,3 +296,94 @@ def get_user_tailored_resume(
         TailoredResume.id == tailored_resume_id,
         TailoredResume.user_id == user_id,
     ).first()
+
+
+def create_user_tailored_resume_version(
+    tailored_resume_id: int,
+    user_id: int,
+    content: TailoredResumeContent | None,
+    status: str | None,
+    db: Session,
+) -> TailoredResume | None:
+    existing = get_user_tailored_resume(
+        tailored_resume_id=tailored_resume_id,
+        user_id=user_id,
+        db=db,
+    )
+
+    if existing is None:
+        return None
+
+    latest_version = (
+        db.query(
+            func.max(TailoredResume.version_number)
+        )
+        .filter(
+            TailoredResume.user_id == user_id,
+            TailoredResume.version_group_id
+            == existing.version_group_id,
+        )
+        .scalar()
+    )
+
+    new_version = TailoredResume(
+        user_id=user_id,
+        source_analysis_id=existing.source_analysis_id,
+        source_resume_filename=(
+            existing.source_resume_filename
+        ),
+        version_group_id=existing.version_group_id,
+        version_number=(
+            latest_version or existing.version_number
+        ) + 1,
+        status=status or existing.status,
+        content=(
+            content.model_dump(mode="json")
+            if content is not None
+            else dict(existing.content)
+        ),
+        emphasized_items=list(
+            existing.emphasized_items
+        ),
+        reordered_items=list(
+            existing.reordered_items
+        ),
+        match_snapshot=dict(existing.match_snapshot),
+    )
+
+    db.add(new_version)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(new_version)
+
+    return new_version
+
+
+def delete_user_tailored_resume(
+    tailored_resume_id: int,
+    user_id: int,
+    db: Session,
+) -> TailoredResume | None:
+    tailored_resume = get_user_tailored_resume(
+        tailored_resume_id=tailored_resume_id,
+        user_id=user_id,
+        db=db,
+    )
+
+    if tailored_resume is None:
+        return None
+
+    db.delete(tailored_resume)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    return tailored_resume

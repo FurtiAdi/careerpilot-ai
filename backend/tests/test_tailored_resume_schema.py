@@ -7,6 +7,7 @@ from app.models.tailored_resume_schema import (
     TailoredResumeAIResponse,
     TailoredResumeGenerateRequest,
     TailoredResumeResponse,
+    TailoredResumeUpdateRequest,
 )
 
 
@@ -99,3 +100,11 @@ def test_tailored_resume_response_serializes_orm_record():
     assert response.user_id == 7
     assert response.content.skills == ["Python"]
     assert response.status == "draft"
+
+
+def test_update_request_requires_at_least_one_change():
+    with pytest.raises(
+        ValidationError,
+        match="At least one field",
+    ):
+        TailoredResumeUpdateRequest()

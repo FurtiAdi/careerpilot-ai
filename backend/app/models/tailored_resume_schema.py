@@ -1,6 +1,11 @@
 from datetime import datetime
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_validator,
+)
 
 
 class StrictSchema(BaseModel):
@@ -62,6 +67,20 @@ class TailoredResumeContent(StrictSchema):
         default_factory=list
     )
 
+
+class TailoredResumeUpdateRequest(StrictSchema):
+    content: TailoredResumeContent | None = None
+    status: Literal["draft", "saved"] | None = None
+
+    @model_validator(mode="after")
+    def require_change(self):
+        if self.content is None and self.status is None:
+            raise ValueError(
+                "At least one field must be provided."
+            )
+
+        return self
+    
 
 class TailoredResumeAIResponse(StrictSchema):
     content: TailoredResumeContent

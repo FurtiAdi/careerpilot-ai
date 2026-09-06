@@ -379,3 +379,184 @@ def test_get_user_tailored_resume_filters_by_id_and_user():
 
     assert result is expected
     db.query.assert_called_once()
+
+
+def make_persisted_tailored_resume():
+    return SimpleNamespace(
+        id=12,
+        user_id=7,
+        source_analysis_id=20,
+        source_resume_filename="saved-resume.pdf",
+        version_group_id="group-id",
+        version_number=2,
+        status="draft",
+        content=make_grounding_source().model_dump(
+            mode="json"
+        ),
+        emphasized_items=["Python"],
+        reordered_items=["Experience"],
+        match_snapshot={"match_score": 80},
+    )
+
+
+def test_update_creates_new_version(
+    monkeypatch,
+):
+    db = MagicMock()
+    existing = make_persisted_tailored_resume()
+
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "get_user_tailored_resume",
+        MagicMock(return_value=existing),
+    )
+
+    db.query.return_value.filter.return_value.scalar.return_value = (
+        3
+    )
+
+    updated_content = make_grounding_source()
+    updated_content.summary = "Updated summary."
+
+    result = (
+        tailored_resume_service
+        .create_user_tailored_resume_version(
+            tailored_resume_id=12,
+            user_id=7,
+            content=updated_content,
+            status="saved",
+            db=db,
+        )
+    )
+
+    assert result.user_id == 7
+    assert result.version_group_id == "group-id"
+    assert result.version_number == 4
+    assert result.status == "saved"
+    assert result.content["summary"] == (
+        "Updated summary."
+    )
+    assert result.match_snapshot == {
+        "match_score": 80
+    }
+
+    db.add.assert_called_once_with(result)
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once_with(result)
+
+
+def test_update_returns_none_when_not_owned(
+    monkeypatch,
+):
+    db = MagicMock()
+
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "get_user_tailored_resume",
+        MagicMock(return_value=None),
+    )
+
+    result = (
+        tailored_resume_service
+        .create_user_tailored_resume_version(
+            tailored_resume_id=99,
+            user_id=7,
+            content=None,
+            status="saved",
+            db=db,
+        )
+    )
+
+    assert result is None
+    db.add.assert_not_called()
+    db.commit.assert_not_called()
+
+
+def test_update_rolls_back_on_commit_error(
+    monkeypatch,
+):
+    db = MagicMock()
+    db.commit.side_effect = Exception(
+        "Database error"
+    )
+
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "get_user_tailored_resume",
+        MagicMock(
+            return_value=make_persisted_tailored_resume()
+        ),
+    )
+
+    db.query.return_value.filter.return_value.scalar.return_value = (
+        2
+    )
+
+    with pytest.raises(
+        Exception,
+        match="Database error",
+    ):
+        (
+            tailored_resume_service
+            .create_user_tailored_resume_version(
+                tailored_resume_id=12,
+                user_id=7,
+                content=None,
+                status="saved",
+                db=db,
+            )
+        )
+
+    db.rollback.assert_called_once()
+    db.refresh.assert_not_called()
+
+
+def test_delete_user_tailored_resume_success(
+    monkeypatch,
+):
+    db = MagicMock()
+    existing = make_persisted_tailored_resume()
+
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "get_user_tailored_resume",
+        MagicMock(return_value=existing),
+    )
+
+    result = (
+        tailored_resume_service
+        .delete_user_tailored_resume(
+            tailored_resume_id=12,
+            user_id=7,
+            db=db,
+        )
+    )
+
+    assert result is existing
+    db.delete.assert_called_once_with(existing)
+    db.commit.assert_called_once()
+
+
+def test_delete_returns_none_when_not_owned(
+    monkeypatch,
+):
+    db = MagicMock()
+
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "get_user_tailored_resume",
+        MagicMock(return_value=None),
+    )
+
+    result = (
+        tailored_resume_service
+        .delete_user_tailored_resume(
+            tailored_resume_id=99,
+            user_id=7,
+            db=db,
+        )
+    )
+
+    assert result is None
+    db.delete.assert_not_called()
+    db.commit.assert_not_called()
