@@ -10,6 +10,8 @@ from app.services.ai_prompts import (
     TAILORED_RESUME_SYSTEM_PROMPT,
     build_analysis_prompt,
     build_tailored_resume_prompt,
+    RESUME_STRUCTURE_SYSTEM_PROMPT,
+    build_resume_structure_prompt,
 )
 
 from app.core.config import settings
@@ -26,6 +28,10 @@ class AIAnalysisError(Exception):
 
 class TailoredResumeGenerationError(Exception):
     """Raised when a tailored resume cannot be generated safely."""
+
+
+class ResumeStructuringError(Exception):
+    """Raised when resume text cannot be structured safely."""
 
 
 def generate_ai_analysis(
@@ -131,4 +137,52 @@ def generate_tailored_resume(
     except OpenAIError as exc:
         raise TailoredResumeGenerationError(
             "Tailored resume generation is temporarily unavailable."
+        ) from exc
+
+
+def structure_resume_text(
+    resume_text: str,
+) -> TailoredResumeContent:
+    if not resume_text.strip():
+        raise ResumeStructuringError(
+            "The source resume contains no extractable text."
+        )
+
+    prompt = build_resume_structure_prompt(
+        resume_text
+    )
+
+    try:
+        response = client.beta.chat.completions.parse(
+            model=settings.AI_ANALYSIS_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": RESUME_STRUCTURE_SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            response_format=TailoredResumeContent,
+        )
+
+        message = response.choices[0].message
+
+        if message.refusal:
+            raise ResumeStructuringError(
+                "The AI provider refused to structure the resume."
+            )
+
+        if message.parsed is None:
+            raise ResumeStructuringError(
+                "The structured resume response could not be parsed."
+            )
+
+        return message.parsed
+
+    except OpenAIError as exc:
+        raise ResumeStructuringError(
+            "Resume structuring is temporarily unavailable."
         ) from exc
