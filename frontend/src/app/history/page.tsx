@@ -9,42 +9,58 @@ import {
   deleteAnalysisById,
 } from "@/services/analysisService"
 
+import { generateTailoredResume } from "@/services/tailoredResumeService"
+
 export default function HistoryPage() {
 
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] =
     useState<string | null>(null)
+  const [generatingAnalysisId, setGeneratingAnalysisId] =
+    useState<number | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    const token = localStorage.getItem(
-      "token"
-    )
+    const token = localStorage.getItem("token")
+
     if (!token) {
       router.push("/login")
       return
     }
-    fetchAnalyses()
-  }, [])
 
-  const fetchAnalyses = async () => {
-    try {
-      setError(null)
+    let cancelled = false
 
-      const data = await getAnalyses()
+    const loadAnalyses = async () => {
+      try {
+        setError(null)
 
-      setAnalyses(data)
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load analyses."
-      )
-    } finally {
-      setLoading(false)
+        const data = await getAnalyses()
+
+        if (!cancelled) {
+          setAnalyses(data)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load analyses."
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
-  }
+
+    void loadAnalyses()
+
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   const deleteAnalysis = async (
     id: number
@@ -66,6 +82,30 @@ export default function HistoryPage() {
           ? error.message
           : "Failed to delete analysis."
       )
+    }
+  }
+
+  const generateResume = async (
+    analysisId: number
+  ) => {
+    try {
+      setError(null)
+      setGeneratingAnalysisId(analysisId)
+
+      const tailoredResume =
+        await generateTailoredResume(analysisId)
+
+      router.push(
+        `/tailored-resumes/${tailoredResume.id}`
+      )
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate tailored resume."
+      )
+    } finally {
+      setGeneratingAnalysisId(null)
     }
   }
 
@@ -191,6 +231,25 @@ export default function HistoryPage() {
                   >
                     {analysis.match_score}%
                   </div>
+                  <button
+                    onClick={() => generateResume(analysis.id)}
+                    disabled={generatingAnalysisId !== null}
+                    className="
+                      mt-4 ml-auto block px-4 py-2
+                      rounded-xl
+                      bg-purple-500/20
+                      border border-purple-500/30
+                      text-purple-200
+                      hover:bg-purple-500/30
+                      disabled:cursor-not-allowed
+                      disabled:opacity-50
+                      transition-all duration-300
+                    "
+                  >
+                    {generatingAnalysisId === analysis.id
+                      ? "Generating..."
+                      : "Generate Tailored Resume"}
+                  </button>
 
                   <button
                     onClick={() => {
@@ -205,7 +264,7 @@ export default function HistoryPage() {
 
                     }}
                     className="
-                      mt-4 px-4 py-2
+                      mt-4 ml-auto block px-4 py-2
                       rounded-xl
                       bg-red-500/10
                       border border-red-500/20
