@@ -1,9 +1,103 @@
+import pytest
+
+from app.models.tailored_resume_schema import (
+    TailoredResumeContent,
+)
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from app.skills.requirements import SkillRequirements
 from app.services import tailored_resume_service
 
+def make_grounding_source() -> TailoredResumeContent:
+    return TailoredResumeContent(
+        contact={
+            "full_name": "Ada Lovelace",
+            "email": "ada@example.com",
+        },
+        experience=[
+            {
+                "employer": "Real Company",
+                "title": "Software Engineer",
+                "start_date": "2022",
+                "end_date": "2024",
+                "bullets": [
+                    "Built Python applications."
+                ],
+            }
+        ],
+        skills=["Python"],
+    )
+
+
+def test_grounding_allows_rephrasing_of_real_experience():
+    source = make_grounding_source()
+    generated = source.model_copy(deep=True)
+    generated.experience[0].bullets = [
+        "Developed applications using Python."
+    ]
+
+    tailored_resume_service.validate_tailored_resume_grounding(
+        source=source,
+        generated=generated,
+        match_snapshot={
+            "missing_required_skills": ["docker"],
+            "missing_preferred_skills": [],
+        },
+    )
+
+
+def test_grounding_rejects_invented_employer():
+    source = make_grounding_source()
+    generated = source.model_copy(deep=True)
+    generated.experience[0].employer = "Invented Company"
+
+    with pytest.raises(
+        tailored_resume_service.TailoredResumeGroundingError,
+        match="unsupported facts",
+    ):
+        tailored_resume_service.validate_tailored_resume_grounding(
+            source=source,
+            generated=generated,
+            match_snapshot={},
+        )
+
+
+def test_grounding_rejects_missing_skill_as_claimed():
+    source = make_grounding_source()
+    generated = source.model_copy(deep=True)
+    generated.skills.append("Docker")
+
+    with pytest.raises(
+        tailored_resume_service.TailoredResumeGroundingError,
+        match="unsupported skills",
+    ):
+        tailored_resume_service.validate_tailored_resume_grounding(
+            source=source,
+            generated=generated,
+            match_snapshot={
+                "missing_required_skills": ["docker"],
+            },
+        )
+
+
+def test_grounding_rejects_invented_quantity():
+    source = make_grounding_source()
+    generated = source.model_copy(deep=True)
+    generated.experience[0].bullets = [
+        "Improved application performance by 50%."
+    ]
+
+    with pytest.raises(
+        tailored_resume_service.TailoredResumeGroundingError,
+        match="unsupported quantity",
+    ):
+        tailored_resume_service.validate_tailored_resume_grounding(
+            source=source,
+            generated=generated,
+            match_snapshot={},
+        )
+        
 
 def test_build_match_snapshot_uses_stored_analysis(
     monkeypatch,
