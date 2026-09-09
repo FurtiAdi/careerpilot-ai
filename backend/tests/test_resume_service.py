@@ -1,8 +1,9 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
 from app.models.tailored_resume_schema import (
+    ResumeEducation,
     TailoredResumeContent,
 )
 from app.services import resume_service
@@ -52,6 +53,40 @@ def test_resume_evidence_accepts_source_backed_content():
     )
 
 
+def test_resume_evidence_accepts_punctuation_variation():
+    structured_content = make_structured_resume()
+    structured_content.experience[0].employer = (
+        "Real Company, Inc."
+    )
+    resume_text = make_resume_text().replace(
+        "Real Company",
+        "Real Company Inc.",
+    )
+
+    resume_service.validate_structured_resume_evidence(
+        resume_text=resume_text,
+        structured_content=structured_content,
+    )
+
+
+def test_resume_evidence_rejects_partial_word_match():
+    structured_content = TailoredResumeContent(
+        contact={"full_name": "Ada Lovelace"},
+        skills=["SQL"],
+    )
+
+    with pytest.raises(
+        resume_service.ResumeEvidenceError,
+        match="content.skills",
+    ):
+        resume_service.validate_structured_resume_evidence(
+            resume_text=(
+                "Ada Lovelace works with PostgreSQL."
+            ),
+            structured_content=structured_content,
+        )
+
+
 def test_resume_evidence_rejects_invented_content():
     structured_content = make_structured_resume()
     structured_content.experience[0].employer = (
@@ -60,12 +95,169 @@ def test_resume_evidence_rejects_invented_content():
 
     with pytest.raises(
         resume_service.ResumeEvidenceError,
-        match="unsupported source data",
-    ):
+        match=(
+            r"content\.experience\[0\]\.employer"
+            r".*unsupported source data"
+        ),
+    ) as exc:
         resume_service.validate_structured_resume_evidence(
             resume_text=make_resume_text(),
             structured_content=structured_content,
         )
+
+    assert exc.value.field_path == (
+        "content.experience[0].employer"
+    )
+
+
+def test_build_grounded_resume_content_discards_unsupported_summary(
+    monkeypatch,
+):
+    structured_content = make_structured_resume()
+    structured_content.summary = (
+        "Invented professional summary."
+    )
+
+    monkeypatch.setattr(
+        resume_service,
+        "structure_resume_text",
+        MagicMock(return_value=structured_content),
+    )
+
+    result = resume_service.build_grounded_resume_content(
+        make_resume_text()
+    )
+
+    assert result.summary is None
+
+
+def test_build_grounded_resume_content_repairs_malformed_unicode(
+    monkeypatch,
+):
+    structured_content = make_structured_resume()
+    structured_content.experience[0].employer = (
+        "Real Comp\x00e4ny"
+    )
+    resume_text = make_resume_text().replace(
+        "Real Company",
+        "Real Compäny",
+    )
+
+    monkeypatch.setattr(
+        resume_service,
+        "structure_resume_text",
+        MagicMock(return_value=structured_content),
+    )
+
+    result = resume_service.build_grounded_resume_content(
+        resume_text
+    )
+
+    assert (
+        result.experience[0].employer
+        == "Real Compäny"
+    )
+
+
+def test_build_grounded_resume_discards_unsupported_education_detail(
+    monkeypatch,
+):
+    structured_content = make_structured_resume()
+    structured_content.education = [
+        ResumeEducation(
+            institution="Real School",
+            details=[
+                "Verified coursework",
+                "Invented coursework",
+            ],
+        )
+    ]
+    resume_text = (
+        make_resume_text()
+        + "\nReal School\nVerified coursework\n"
+    )
+
+    monkeypatch.setattr(
+        resume_service,
+        "structure_resume_text",
+        MagicMock(return_value=structured_content),
+    )
+
+    result = resume_service.build_grounded_resume_content(
+        resume_text
+    )
+
+    assert result.education[0].details == [
+        "Verified coursework"
+    ]
+
+
+def test_build_grounded_resume_content_retries_rejected_field(
+    monkeypatch,
+):
+    rejected = make_structured_resume()
+    rejected.experience[0].employer = (
+        "Invented Company"
+    )
+    corrected = make_structured_resume()
+
+    mock_structure = MagicMock(
+        side_effect=[rejected, corrected]
+    )
+    monkeypatch.setattr(
+        resume_service,
+        "structure_resume_text",
+        mock_structure,
+    )
+
+    result = resume_service.build_grounded_resume_content(
+        make_resume_text()
+    )
+
+    assert result is corrected
+    assert mock_structure.call_args_list == [
+        call(make_resume_text()),
+        call(
+            make_resume_text(),
+            rejected_field=(
+                "content.experience[0].employer"
+            ),
+        ),
+    ]
+
+
+def test_build_grounded_resume_content_retries_only_once(
+    monkeypatch,
+):
+    first_rejected = make_structured_resume()
+    first_rejected.experience[0].employer = (
+        "Invented Company"
+    )
+    second_rejected = make_structured_resume()
+    second_rejected.experience[0].employer = (
+        "Still Invented Company"
+    )
+
+    mock_structure = MagicMock(
+        side_effect=[
+            first_rejected,
+            second_rejected,
+        ]
+    )
+    monkeypatch.setattr(
+        resume_service,
+        "structure_resume_text",
+        mock_structure,
+    )
+
+    with pytest.raises(
+        resume_service.ResumeEvidenceError
+    ):
+        resume_service.build_grounded_resume_content(
+            make_resume_text()
+        )
+
+    assert mock_structure.call_count == 2
 
 
 def test_build_grounded_resume_content_validates_ai_result(

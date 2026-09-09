@@ -39,20 +39,41 @@ def test_structure_resume_text_returns_parsed_content(
     ]
 
     mock_parse = MagicMock(return_value=response)
+    mock_prompt = MagicMock(
+        return_value="Correction prompt"
+    )
     monkeypatch.setattr(
         ai_service.client.beta.chat.completions,
         "parse",
         mock_parse,
     )
+    monkeypatch.setattr(
+        ai_service,
+        "build_resume_structure_prompt",
+        mock_prompt,
+    )
 
     result = ai_service.structure_resume_text(
-        "Ada worked at Real Company using Python."
+        "Ada worked at Real Company using Python.",
+        rejected_field=(
+            "content.experience[0].employer"
+        ),
     )
 
     assert result == parsed
+    mock_prompt.assert_called_once_with(
+        "Ada worked at Real Company using Python.",
+        rejected_field=(
+            "content.experience[0].employer"
+        ),
+    )
     assert (
         mock_parse.call_args.kwargs["response_format"]
         is TailoredResumeContent
+    )
+    assert (
+        mock_parse.call_args.kwargs["temperature"]
+        == 0
     )
 
 

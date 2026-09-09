@@ -5,10 +5,23 @@ from types import SimpleNamespace
 
 from app.models.tailored_resume_schema import (
     TailoredResumeAIResponse,
+    TailoredResumeContent,
     TailoredResumeGenerateRequest,
     TailoredResumeResponse,
     TailoredResumeUpdateRequest,
 )
+
+
+def test_experience_employer_requires_verbatim_source_value():
+    schema = TailoredResumeContent.model_json_schema()
+
+    employer_schema = (
+        schema["$defs"]["ResumeExperience"]
+        ["properties"]["employer"]
+    )
+
+    assert "verbatim" in employer_schema["description"]
+    assert "source resume" in employer_schema["description"]
 
 
 def test_tailored_resume_response_accepts_structured_content():

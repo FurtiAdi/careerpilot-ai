@@ -16,6 +16,7 @@ from app.services.ai_service import (
 )
 
 from app.services.resume_service import (
+    ResumeEvidenceError,
     SavedResumeNotFoundError,
 )
 
@@ -102,6 +103,12 @@ def test_generate_tailored_resume_returns_404_for_missing_analysis(
         (
             SavedResumeNotFoundError(),
             422,
+        ),
+        (
+            ResumeEvidenceError(
+                "content.experience[0].employer"
+            ),
+            502,
         ),
         (
             TailoredResumeGenerationError("Provider failure"),

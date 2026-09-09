@@ -21,7 +21,13 @@ class ResumeContact(StrictSchema):
 
 
 class ResumeExperience(StrictSchema):
-    employer: str = Field(min_length=1)
+    employer: str = Field(
+        min_length=1,
+        description=(
+            "Employer name copied verbatim from the source resume. "
+            "Never expand, normalize, infer, or rewrite this value."
+        ),
+    )
     title: str = Field(min_length=1)
     location: str | None = None
     start_date: str | None = None

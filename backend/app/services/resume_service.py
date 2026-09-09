@@ -1,4 +1,8 @@
 import os
+import logging
+import re
+import unicodedata
+
 from collections.abc import Iterator
 
 import fitz
@@ -10,9 +14,21 @@ from app.models.tailored_resume_schema import (
 from app.models.user_model import User
 from app.services.ai_service import structure_resume_text
 
+logger = logging.getLogger(__name__)
+
+MALFORMED_UNICODE_PATTERN = re.compile(
+    r"\x00([0-9a-fA-F]{2})"
+)
 
 class ResumeEvidenceError(ValueError):
     """Raised when structured data lacks source evidence."""
+
+    def __init__(self, field_path: str):
+        self.field_path = field_path
+        super().__init__(
+            f"Structured resume field {field_path} "
+            "contains unsupported source data."
+        )
 
 
 class SavedResumeNotFoundError(FileNotFoundError):
@@ -20,29 +36,41 @@ class SavedResumeNotFoundError(FileNotFoundError):
 
 
 def _normalize_evidence(value: str) -> str:
-    return " ".join(
-        value.casefold().split()
+    normalized = unicodedata.normalize(
+        "NFKC",
+        value,
+    ).casefold()
+
+    normalized = re.sub(
+        r"[^\w+#]+",
+        " ",
+        normalized,
     )
+
+    return " ".join(normalized.split())
 
 
 def _iter_string_values(
     value: object,
-) -> Iterator[str]:
+    path: str = "content",
+) -> Iterator[tuple[str, str]]:
     if isinstance(value, str):
-        yield value
+        yield path, value
         return
 
     if isinstance(value, dict):
-        for nested_value in value.values():
+        for key, nested_value in value.items():
             yield from _iter_string_values(
-                nested_value
+                nested_value,
+                f"{path}.{key}",
             )
         return
 
     if isinstance(value, list):
-        for nested_value in value:
+        for index, nested_value in enumerate(value):
             yield from _iter_string_values(
-                nested_value
+                nested_value,
+                f"{path}[{index}]",
             )
 
 
@@ -54,7 +82,7 @@ def validate_structured_resume_evidence(
         resume_text
     )
 
-    for value in _iter_string_values(
+    for field_path, value in _iter_string_values(
         structured_content.model_dump(
             mode="json"
         )
@@ -65,12 +93,130 @@ def validate_structured_resume_evidence(
 
         if (
             normalized_value
-            and normalized_value not in normalized_source
-        ):
-            raise ResumeEvidenceError(
-                "Structured resume content contains "
-                "unsupported source data."
+            and
+            (f" {normalized_value} "
+                not in f" {normalized_source} "
             )
+        ):
+            logger.warning(
+                "Structured resume evidence rejected field %s",
+                field_path,
+            )
+            raise ResumeEvidenceError(field_path)
+
+
+def _repair_malformed_unicode(
+    value: object,
+) -> object:
+    if isinstance(value, str):
+        return MALFORMED_UNICODE_PATTERN.sub(
+            lambda match: chr(
+                int(match.group(1), 16)
+            ),
+            value,
+        )
+
+    if isinstance(value, dict):
+        return {
+            key: _repair_malformed_unicode(nested)
+            for key, nested in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            _repair_malformed_unicode(nested)
+            for nested in value
+        ]
+
+    return value
+
+
+def _repair_structured_resume_encoding(
+    content: TailoredResumeContent,
+) -> TailoredResumeContent:
+    serialized = content.model_dump(mode="json")
+    repaired = _repair_malformed_unicode(
+        serialized
+    )
+
+    if repaired == serialized:
+        return content
+
+    return TailoredResumeContent.model_validate(
+        repaired
+    )
+
+
+def _discard_unsupported_education_details(
+    resume_text: str,
+    content: TailoredResumeContent,
+) -> TailoredResumeContent:
+    normalized_source = _normalize_evidence(
+        resume_text
+    )
+    serialized = content.model_dump(mode="json")
+    changed = False
+
+    for education_index, education in enumerate(
+        serialized["education"]
+    ):
+        supported_details = []
+
+        for detail_index, detail in enumerate(
+            education["details"]
+        ):
+            normalized_detail = _normalize_evidence(
+                detail
+            )
+
+            if (
+                not normalized_detail
+                or (
+                    f" {normalized_detail} "
+                    in f" {normalized_source} "
+                )
+            ):
+                supported_details.append(detail)
+                continue
+
+            logger.warning(
+                "Discarding unsupported structured resume "
+                "field content.education[%s].details[%s]",
+                education_index,
+                detail_index,
+            )
+            changed = True
+
+        education["details"] = supported_details
+
+    if not changed:
+        return content
+
+    return TailoredResumeContent.model_validate(
+        serialized
+    )
+
+
+def _discard_unsupported_summary(
+    resume_text: str,
+    structured_content: TailoredResumeContent,
+) -> TailoredResumeContent:
+    if (
+        structured_content.summary
+        and (
+            f" {_normalize_evidence(structured_content.summary)} "
+            not in f" {_normalize_evidence(resume_text)} "
+        )
+    ):
+        logger.warning(
+            "Discarding unsupported structured resume "
+            "field content.summary"
+        )
+        return structured_content.model_copy(
+            update={"summary": None}
+        )
+
+    return structured_content
 
 
 def build_grounded_resume_content(
@@ -79,11 +225,54 @@ def build_grounded_resume_content(
     structured_content = structure_resume_text(
         resume_text
     )
-
-    validate_structured_resume_evidence(
-        resume_text=resume_text,
-        structured_content=structured_content,
+    structured_content = _repair_structured_resume_encoding(
+        structured_content
     )
+    structured_content = (
+        _discard_unsupported_education_details(
+            resume_text,
+            structured_content,
+        )
+    )
+    structured_content = _discard_unsupported_summary(
+        resume_text,
+        structured_content,
+    )
+
+    try:
+        validate_structured_resume_evidence(
+            resume_text=resume_text,
+            structured_content=structured_content,
+        )
+    except ResumeEvidenceError as exc:
+        logger.warning(
+            "Retrying resume structuring after rejected "
+            "field %s",
+            exc.field_path,
+        )
+
+        structured_content = structure_resume_text(
+            resume_text,
+            rejected_field=exc.field_path,
+        )
+        structured_content = _repair_structured_resume_encoding(
+            structured_content
+        )
+        structured_content = (
+            _discard_unsupported_education_details(
+                resume_text,
+                structured_content,
+            )
+        )
+        structured_content = _discard_unsupported_summary(
+            resume_text,
+            structured_content,
+        )
+
+        validate_structured_resume_evidence(
+            resume_text=resume_text,
+            structured_content=structured_content,
+        )
 
     return structured_content
 

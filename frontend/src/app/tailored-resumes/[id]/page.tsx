@@ -2,21 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import {
     getTailoredResume,
+    updateTailoredResume,
     type TailoredResume,
 } from "@/services/tailoredResumeService";
 
 export default function TailoredResumePreviewPage() {
     const params = useParams<{ id: string }>();
+    const router = useRouter();
     const resumeId = Number(params.id);
     const validResumeId = Number.isInteger(resumeId) && resumeId > 0;
 
     const [resume, setResume] = useState<TailoredResume | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [editing, setEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [draftSummary, setDraftSummary] = useState("");
+    const [actionError, setActionError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!validResumeId) {
@@ -53,6 +59,59 @@ export default function TailoredResumePreviewPage() {
             cancelled = true;
         };
     }, [resumeId, validResumeId]);
+
+    const beginEditing = () => {
+        if (!resume) {
+            return;
+        }
+
+        setDraftSummary(resume.content.summary ?? "");
+        setActionError(null);
+        setEditing(true);
+    };
+
+    const cancelEditing = () => {
+        setDraftSummary("");
+        setActionError(null);
+        setEditing(false);
+    };
+
+    const saveSummary = async () => {
+        if (!resume) {
+            return;
+        }
+
+        try {
+            setSaving(true);
+            setActionError(null);
+
+            const updatedResume = await updateTailoredResume(
+                resume.id,
+                {
+                    content: {
+                        ...resume.content,
+                        summary: draftSummary.trim() || null,
+                    },
+                    status: "saved",
+                },
+            );
+
+            setResume(updatedResume);
+            setEditing(false);
+
+            router.replace(
+                `/tailored-resumes/${updatedResume.id}`,
+            );
+        } catch (error) {
+            setActionError(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to save tailored resume.",
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
 
     if (!validResumeId) {
         return (
@@ -108,13 +167,48 @@ export default function TailoredResumePreviewPage() {
                         <h1 className="mt-2 text-4xl font-bold">Tailored Resume Preview</h1>
                     </div>
 
-                    <Link
-                        href="/history"
-                        className="rounded-xl border border-white/10 px-4 py-2 text-gray-300 hover:border-purple-500/40"
-                    >
-                        Back to history
-                    </Link>
+                    <div className="flex flex-wrap gap-3">
+                        {editing ? (
+                            <>
+                                <button
+                                    onClick={cancelEditing}
+                                    disabled={saving}
+                                    className="rounded-xl border border-white/10 px-4 py-2 text-gray-300 disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    onClick={saveSummary}
+                                    disabled={saving}
+                                    className="rounded-xl bg-purple-600 px-4 py-2 font-semibold text-white hover:bg-purple-500 disabled:opacity-50"
+                                >
+                                    {saving ? "Saving..." : "Save version"}
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={beginEditing}
+                                className="rounded-xl bg-purple-600 px-4 py-2 font-semibold text-white hover:bg-purple-500"
+                            >
+                                Edit summary
+                            </button>
+                        )}
+
+                        <Link
+                            href="/history"
+                            className="rounded-xl border border-white/10 px-4 py-2 text-gray-300 hover:border-purple-500/40"
+                        >
+                            Back to history
+                        </Link>
+                    </div>
                 </div>
+
+                {actionError && (
+                    <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-red-200">
+                        {actionError}
+                    </div>
+                )}
 
                 <article className="rounded-3xl bg-white p-8 text-gray-900 shadow-2xl md:p-12">
                     <header className="border-b border-gray-200 pb-6 text-center">
@@ -135,14 +229,37 @@ export default function TailoredResumePreviewPage() {
                         )}
                     </header>
 
-                    {content.summary && (
+                    {editing ? (
                         <section className="mt-8">
-                            <h3 className="text-lg font-bold uppercase tracking-wide">
+                            <label
+                                htmlFor="resume-summary"
+                                className="text-lg font-bold uppercase tracking-wide"
+                            >
                                 Professional Summary
-                            </h3>
+                            </label>
 
-                            <p className="mt-3 leading-7 text-gray-700">{content.summary}</p>
+                            <textarea
+                                id="resume-summary"
+                                value={draftSummary}
+                                onChange={(event) =>
+                                    setDraftSummary(event.target.value)
+                                }
+                                rows={6}
+                                className="mt-3 w-full rounded-xl border border-purple-300 p-4 leading-7 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+                            />
                         </section>
+                    ) : (
+                        content.summary && (
+                            <section className="mt-8">
+                                <h3 className="text-lg font-bold uppercase tracking-wide">
+                                    Professional Summary
+                                </h3>
+
+                                <p className="mt-3 leading-7 text-gray-700">
+                                    {content.summary}
+                                </p>
+                            </section>
+                        )
                     )}
 
                     {content.skills.length > 0 && (

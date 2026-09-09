@@ -142,6 +142,7 @@ def generate_tailored_resume(
 
 def structure_resume_text(
     resume_text: str,
+    rejected_field: str | None = None,
 ) -> TailoredResumeContent:
     if not resume_text.strip():
         raise ResumeStructuringError(
@@ -149,12 +150,14 @@ def structure_resume_text(
         )
 
     prompt = build_resume_structure_prompt(
-        resume_text
+        resume_text,
+        rejected_field=rejected_field,
     )
 
     try:
         response = client.beta.chat.completions.parse(
             model=settings.AI_ANALYSIS_MODEL,
+            temperature=0,
             messages=[
                 {
                     "role": "system",

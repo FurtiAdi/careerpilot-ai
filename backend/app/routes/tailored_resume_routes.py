@@ -28,6 +28,7 @@ from app.services.tailored_resume_service import (
     delete_user_tailored_resume,
 )
 from app.services.resume_service import (
+    ResumeEvidenceError,
     SavedResumeNotFoundError,
 )
 
@@ -67,7 +68,10 @@ def generate_tailored_resume_draft(
                 "temporarily unavailable."
             ),
         ) from exc
-    except TailoredResumeGroundingError as exc:
+    except (
+        ResumeEvidenceError,
+        TailoredResumeGroundingError,
+    ) as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=(
