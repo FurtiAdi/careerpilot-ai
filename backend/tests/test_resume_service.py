@@ -4,6 +4,7 @@ import pytest
 
 from app.models.tailored_resume_schema import (
     ResumeEducation,
+    ResumeProject,
     TailoredResumeContent,
 )
 from app.services import resume_service
@@ -190,6 +191,36 @@ def test_build_grounded_resume_discards_unsupported_education_detail(
     assert result.education[0].details == [
         "Verified coursework"
     ]
+
+
+def test_build_grounded_resume_discards_unsupported_project(
+    monkeypatch,
+):
+    structured_content = make_structured_resume()
+    structured_content.projects = [
+        ResumeProject(
+            name="Invented Project",
+            description="Invented project description.",
+        )
+    ]
+
+    mock_structure = MagicMock(
+        return_value=structured_content
+    )
+    monkeypatch.setattr(
+        resume_service,
+        "structure_resume_text",
+        mock_structure,
+    )
+
+    result = resume_service.build_grounded_resume_content(
+        make_resume_text()
+    )
+
+    assert result.projects == []
+    mock_structure.assert_called_once_with(
+        make_resume_text()
+    )
 
 
 def test_build_grounded_resume_content_retries_rejected_field(

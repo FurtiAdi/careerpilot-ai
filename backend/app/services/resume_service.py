@@ -197,6 +197,59 @@ def _discard_unsupported_education_details(
     )
 
 
+def _discard_unsupported_projects(
+    resume_text: str,
+    content: TailoredResumeContent,
+) -> TailoredResumeContent:
+    normalized_source = _normalize_evidence(
+        resume_text
+    )
+    serialized = content.model_dump(mode="json")
+    supported_projects = []
+
+    for project_index, project in enumerate(
+        serialized["projects"]
+    ):
+        unsupported_path = next(
+            (
+                field_path
+                for field_path, value in _iter_string_values(
+                    project,
+                    f"content.projects[{project_index}]",
+                )
+                if (
+                    _normalize_evidence(value)
+                    and (
+                        f" {_normalize_evidence(value)} "
+                        not in f" {normalized_source} "
+                    )
+                )
+            ),
+            None,
+        )
+
+        if unsupported_path:
+            logger.warning(
+                "Discarding unsupported structured resume "
+                "project containing field %s",
+                unsupported_path,
+            )
+            continue
+
+        supported_projects.append(project)
+
+    if len(supported_projects) == len(
+        serialized["projects"]
+    ):
+        return content
+
+    serialized["projects"] = supported_projects
+
+    return TailoredResumeContent.model_validate(
+        serialized
+    )
+
+
 def _discard_unsupported_summary(
     resume_text: str,
     structured_content: TailoredResumeContent,
@@ -234,6 +287,10 @@ def build_grounded_resume_content(
             structured_content,
         )
     )
+    structured_content = _discard_unsupported_projects(
+        resume_text,
+        structured_content,
+    )
     structured_content = _discard_unsupported_summary(
         resume_text,
         structured_content,
@@ -263,6 +320,10 @@ def build_grounded_resume_content(
                 resume_text,
                 structured_content,
             )
+        )
+        structured_content = _discard_unsupported_projects(
+            resume_text,
+            structured_content,
         )
         structured_content = _discard_unsupported_summary(
             resume_text,
