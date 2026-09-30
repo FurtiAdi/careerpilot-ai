@@ -98,6 +98,18 @@ export async function getTailoredResume(
   )
 }
 
+export async function downloadTailoredResumePdf(
+  id: number
+): Promise<Blob> {
+  return authenticatedApiRequest<Blob>(
+    `/tailored-resumes/${id}/export`,
+    {
+      method: "GET",
+    },
+    "blob"
+  )
+}
+
 export async function updateTailoredResume(
   id: number,
   update: TailoredResumeUpdate

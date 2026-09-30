@@ -14,16 +14,17 @@ export class ApiError extends Error {
   }
 }
 
+type ApiResponseType = "json" | "blob"
+
 export async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  responseType: ApiResponseType = "json"
 ): Promise<T> {
-
   const isFormData = options.body instanceof FormData
 
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
-
     headers: {
       ...(!isFormData && options.body
         ? {
@@ -45,13 +46,17 @@ export async function apiRequest<T>(
     }
 
     throw new ApiError(
-      message, 
+      message,
       response.status
     )
   }
 
   if (response.status === 204) {
     return undefined as T
+  }
+
+  if (responseType === "blob") {
+    return await response.blob() as T
   }
 
   const contentType = response.headers.get("content-type")
@@ -68,7 +73,8 @@ export async function apiRequest<T>(
 
 export async function authenticatedApiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  responseType: ApiResponseType = "json"
 ): Promise<T> {
 
   const token = localStorage.getItem("token")
@@ -85,13 +91,17 @@ export async function authenticatedApiRequest<T>(
   }
 
   try {
-    return await apiRequest<T>(endpoint, {
-      ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${token}`,
+    return await apiRequest<T>(
+      endpoint,
+      {
+        ...options,
+        headers: {
+          ...options.headers,
+          Authorization: `Bearer ${token}`,
+        },
       },
-    })
+      responseType
+    )
   } catch (error) {
     if (
       error instanceof ApiError &&

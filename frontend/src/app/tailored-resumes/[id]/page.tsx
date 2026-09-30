@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import {
+    downloadTailoredResumePdf,
     getTailoredResume,
     updateTailoredResume,
     type TailoredResume,
@@ -21,7 +22,19 @@ export default function TailoredResumePreviewPage() {
     const [error, setError] = useState<string | null>(null);
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [downloading, setDownloading] = useState(false);
     const [draftSummary, setDraftSummary] = useState("");
+    const [draftSkills, setDraftSkills] = useState("");
+    const [draftExperienceBullets, setDraftExperienceBullets] =
+        useState<string[]>([]);
+    const [draftEducationDetails, setDraftEducationDetails] =
+        useState<string[]>([]);
+    const [draftOptionalSectionItems, setDraftOptionalSectionItems] =
+        useState<string[]>([]);
+    const [draftProjectDescriptions, setDraftProjectDescriptions] =
+        useState<string[]>([]);
+    const [draftProjectBullets, setDraftProjectBullets] =
+        useState<string[]>([]);
     const [actionError, setActionError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -66,17 +79,49 @@ export default function TailoredResumePreviewPage() {
         }
 
         setDraftSummary(resume.content.summary ?? "");
+        setDraftSkills(resume.content.skills.join("\n"));
+        setDraftExperienceBullets(
+            resume.content.experience.map((item) =>
+                item.bullets.join("\n")
+            ),
+        );
+        setDraftProjectDescriptions(
+            resume.content.projects.map(
+                (project) => project.description ?? "",
+            ),
+        );
+        setDraftProjectBullets(
+            resume.content.projects.map((project) =>
+                project.bullets.join("\n")
+            ),
+        );
+        setDraftEducationDetails(
+            resume.content.education.map((item) =>
+                item.details.join("\n")
+            ),
+        );
+        setDraftOptionalSectionItems(
+            resume.content.optional_sections.map((section) =>
+                section.items.join("\n")
+            ),
+        );
         setActionError(null);
         setEditing(true);
     };
 
     const cancelEditing = () => {
         setDraftSummary("");
+        setDraftSkills("");
+        setDraftExperienceBullets([]);
+        setDraftProjectDescriptions([]);
+        setDraftProjectBullets([]);
+        setDraftEducationDetails([]);
+        setDraftOptionalSectionItems([]);
         setActionError(null);
         setEditing(false);
     };
 
-    const saveSummary = async () => {
+    const saveResumeEdits = async () => {
         if (!resume) {
             return;
         }
@@ -85,12 +130,63 @@ export default function TailoredResumePreviewPage() {
             setSaving(true);
             setActionError(null);
 
+            const updatedSkills = draftSkills
+                .split("\n")
+                .map((skill) => skill.trim())
+                .filter(Boolean);
+            const updatedExperience = resume.content.experience.map(
+                (item, index) => ({
+                    ...item,
+                    bullets: (draftExperienceBullets[index] ?? "")
+                        .split("\n")
+                        .map((bullet) => bullet.trim())
+                        .filter(Boolean),
+                }),
+            );
+            const updatedProjects = resume.content.projects.map(
+                (project, index) => ({
+                    ...project,
+                    description: (
+                        draftProjectDescriptions[index] ?? ""
+                    ).trim() || null,
+                    bullets: (draftProjectBullets[index] ?? "")
+                        .split("\n")
+                        .map((bullet) => bullet.trim())
+                        .filter(Boolean),
+                }),
+            );
+            const updatedEducation = resume.content.education.map(
+                (item, index) => ({
+                    ...item,
+                    details: (draftEducationDetails[index] ?? "")
+                        .split("\n")
+                        .map((detail) => detail.trim())
+                        .filter(Boolean),
+                }),
+            );
+            const updatedOptionalSections =
+                resume.content.optional_sections.map(
+                    (section, index) => ({
+                        ...section,
+                        items: (
+                            draftOptionalSectionItems[index] ?? ""
+                        )
+                            .split("\n")
+                            .map((item) => item.trim())
+                            .filter(Boolean),
+                    }),
+                );
             const updatedResume = await updateTailoredResume(
                 resume.id,
                 {
                     content: {
                         ...resume.content,
                         summary: draftSummary.trim() || null,
+                        skills: updatedSkills,
+                        experience: updatedExperience,
+                        projects: updatedProjects,
+                        education: updatedEducation,
+                        optional_sections: updatedOptionalSections,
                     },
                     status: "saved",
                 },
@@ -110,6 +206,41 @@ export default function TailoredResumePreviewPage() {
             );
         } finally {
             setSaving(false);
+        }
+    };
+
+    const downloadPdf = async () => {
+        if (!resume) {
+            return;
+        }
+
+        try {
+            setDownloading(true);
+            setActionError(null);
+
+            const pdfBlob = await downloadTailoredResumePdf(
+                resume.id,
+            );
+            const downloadUrl = URL.createObjectURL(pdfBlob);
+            const link = document.createElement("a");
+
+            link.href = downloadUrl;
+            link.download = `tailored-resume-${resume.id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.setTimeout(() => {
+                URL.revokeObjectURL(downloadUrl);
+            }, 0);
+        } catch (error) {
+            setActionError(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to download tailored resume.",
+            );
+        } finally {
+            setDownloading(false);
         }
     };
 
@@ -179,7 +310,7 @@ export default function TailoredResumePreviewPage() {
                                 </button>
 
                                 <button
-                                    onClick={saveSummary}
+                                    onClick={saveResumeEdits}
                                     disabled={saving}
                                     className="rounded-xl bg-purple-600 px-4 py-2 font-semibold text-white hover:bg-purple-500 disabled:opacity-50"
                                 >
@@ -191,9 +322,17 @@ export default function TailoredResumePreviewPage() {
                                 onClick={beginEditing}
                                 className="rounded-xl bg-purple-600 px-4 py-2 font-semibold text-white hover:bg-purple-500"
                             >
-                                Edit summary
+                                Edit resume
                             </button>
                         )}
+
+                        <button
+                            onClick={downloadPdf}
+                            disabled={editing || saving || downloading}
+                            className="rounded-xl border border-purple-500/40 px-4 py-2 font-semibold text-purple-200 hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {downloading ? "Preparing PDF..." : "Download PDF"}
+                        </button>
 
                         <Link
                             href="/history"
@@ -262,16 +401,42 @@ export default function TailoredResumePreviewPage() {
                         )
                     )}
 
-                    {content.skills.length > 0 && (
+                    {editing ? (
                         <section className="mt-8">
-                            <h3 className="text-lg font-bold uppercase tracking-wide">
+                            <label
+                                htmlFor="resume-skills"
+                                className="text-lg font-bold uppercase tracking-wide"
+                            >
                                 Skills
-                            </h3>
+                            </label>
 
-                            <p className="mt-3 leading-7 text-gray-700">
-                                {content.skills.join(" · ")}
+                            <p className="mt-2 text-sm text-gray-600">
+                                Enter one skill per line. These edits do not recalculate
+                                the saved match score or skill gaps.
                             </p>
+
+                            <textarea
+                                id="resume-skills"
+                                value={draftSkills}
+                                onChange={(event) =>
+                                    setDraftSkills(event.target.value)
+                                }
+                                rows={8}
+                                className="mt-3 w-full rounded-xl border border-purple-300 p-4 leading-7 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+                            />
                         </section>
+                    ) : (
+                        content.skills.length > 0 && (
+                            <section className="mt-8">
+                                <h3 className="text-lg font-bold uppercase tracking-wide">
+                                    Skills
+                                </h3>
+
+                                <p className="mt-3 leading-7 text-gray-700">
+                                    {content.skills.join(" · ")}
+                                </p>
+                            </section>
+                        )
                     )}
 
                     {content.experience.length > 0 && (
@@ -302,12 +467,45 @@ export default function TailoredResumePreviewPage() {
                                             )}
                                         </div>
 
-                                        {item.bullets.length > 0 && (
-                                            <ul className="mt-3 list-disc space-y-2 pl-5 text-gray-700">
-                                                {item.bullets.map((bullet, bulletIndex) => (
-                                                    <li key={`${bullet}-${bulletIndex}`}>{bullet}</li>
-                                                ))}
-                                            </ul>
+                                        {editing ? (
+                                            <div className="mt-3">
+                                                <label
+                                                    htmlFor={`experience-bullets-${index}`}
+                                                    className="text-sm font-semibold text-gray-700"
+                                                >
+                                                    Bullet points
+                                                </label>
+
+                                                <p className="mt-1 text-sm text-gray-600">
+                                                    Enter one truthful accomplishment per line.
+                                                </p>
+
+                                                <textarea
+                                                    id={`experience-bullets-${index}`}
+                                                    value={draftExperienceBullets[index] ?? ""}
+                                                    onChange={(event) =>
+                                                        setDraftExperienceBullets((current) =>
+                                                            current.map((value, valueIndex) =>
+                                                                valueIndex === index
+                                                                    ? event.target.value
+                                                                    : value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    rows={6}
+                                                    className="mt-2 w-full rounded-xl border border-purple-300 p-4 leading-7 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+                                                />
+                                            </div>
+                                        ) : (
+                                            item.bullets.length > 0 && (
+                                                <ul className="mt-3 list-disc space-y-2 pl-5 text-gray-700">
+                                                    {item.bullets.map((bullet, bulletIndex) => (
+                                                        <li key={`${bullet}-${bulletIndex}`}>
+                                                            {bullet}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )
                                         )}
                                     </div>
                                 ))}
@@ -342,12 +540,45 @@ export default function TailoredResumePreviewPage() {
                                             </p>
                                         )}
 
-                                        {item.details.length > 0 && (
-                                            <ul className="mt-2 list-disc pl-5 text-gray-700">
-                                                {item.details.map((detail, detailIndex) => (
-                                                    <li key={`${detail}-${detailIndex}`}>{detail}</li>
-                                                ))}
-                                            </ul>
+                                        {editing ? (
+                                            <div className="mt-3">
+                                                <label
+                                                    htmlFor={`education-details-${index}`}
+                                                    className="text-sm font-semibold text-gray-700"
+                                                >
+                                                    Education details
+                                                </label>
+
+                                                <p className="mt-1 text-sm text-gray-600">
+                                                    Enter one truthful detail per line.
+                                                </p>
+
+                                                <textarea
+                                                    id={`education-details-${index}`}
+                                                    value={draftEducationDetails[index] ?? ""}
+                                                    onChange={(event) =>
+                                                        setDraftEducationDetails((current) =>
+                                                            current.map((value, valueIndex) =>
+                                                                valueIndex === index
+                                                                    ? event.target.value
+                                                                    : value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    rows={5}
+                                                    className="mt-2 w-full rounded-xl border border-purple-300 p-4 leading-7 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+                                                />
+                                            </div>
+                                        ) : (
+                                            item.details.length > 0 && (
+                                                <ul className="mt-2 list-disc pl-5 text-gray-700">
+                                                    {item.details.map((detail, detailIndex) => (
+                                                        <li key={`${detail}-${detailIndex}`}>
+                                                            {detail}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )
                                         )}
                                     </div>
                                 ))}
@@ -366,10 +597,37 @@ export default function TailoredResumePreviewPage() {
                                     <div key={`${project.name}-${index}`}>
                                         <h4 className="font-semibold">{project.name}</h4>
 
-                                        {project.description && (
-                                            <p className="mt-1 text-gray-700">
-                                                {project.description}
-                                            </p>
+                                        {editing ? (
+                                            <div className="mt-3">
+                                                <label
+                                                    htmlFor={`project-description-${index}`}
+                                                    className="text-sm font-semibold text-gray-700"
+                                                >
+                                                    Description
+                                                </label>
+
+                                                <textarea
+                                                    id={`project-description-${index}`}
+                                                    value={draftProjectDescriptions[index] ?? ""}
+                                                    onChange={(event) =>
+                                                        setDraftProjectDescriptions((current) =>
+                                                            current.map((value, valueIndex) =>
+                                                                valueIndex === index
+                                                                    ? event.target.value
+                                                                    : value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    rows={4}
+                                                    className="mt-2 w-full rounded-xl border border-purple-300 p-4 leading-7 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+                                                />
+                                            </div>
+                                        ) : (
+                                            project.description && (
+                                                <p className="mt-1 text-gray-700">
+                                                    {project.description}
+                                                </p>
+                                            )
                                         )}
 
                                         {project.technologies.length > 0 && (
@@ -378,12 +636,45 @@ export default function TailoredResumePreviewPage() {
                                             </p>
                                         )}
 
-                                        {project.bullets.length > 0 && (
-                                            <ul className="mt-2 list-disc pl-5 text-gray-700">
-                                                {project.bullets.map((bullet, bulletIndex) => (
-                                                    <li key={`${bullet}-${bulletIndex}`}>{bullet}</li>
-                                                ))}
-                                            </ul>
+                                        {editing ? (
+                                            <div className="mt-3">
+                                                <label
+                                                    htmlFor={`project-bullets-${index}`}
+                                                    className="text-sm font-semibold text-gray-700"
+                                                >
+                                                    Bullet points
+                                                </label>
+
+                                                <p className="mt-1 text-sm text-gray-600">
+                                                    Enter one truthful project accomplishment per line.
+                                                </p>
+
+                                                <textarea
+                                                    id={`project-bullets-${index}`}
+                                                    value={draftProjectBullets[index] ?? ""}
+                                                    onChange={(event) =>
+                                                        setDraftProjectBullets((current) =>
+                                                            current.map((value, valueIndex) =>
+                                                                valueIndex === index
+                                                                    ? event.target.value
+                                                                    : value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    rows={6}
+                                                    className="mt-2 w-full rounded-xl border border-purple-300 p-4 leading-7 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+                                                />
+                                            </div>
+                                        ) : (
+                                            project.bullets.length > 0 && (
+                                                <ul className="mt-2 list-disc pl-5 text-gray-700">
+                                                    {project.bullets.map((bullet, bulletIndex) => (
+                                                        <li key={`${bullet}-${bulletIndex}`}>
+                                                            {bullet}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )
                                         )}
                                     </div>
                                 ))}
@@ -397,11 +688,44 @@ export default function TailoredResumePreviewPage() {
                                 {section.heading}
                             </h3>
 
-                            <ul className="mt-3 list-disc space-y-2 pl-5 text-gray-700">
-                                {section.items.map((item, itemIndex) => (
-                                    <li key={`${item}-${itemIndex}`}>{item}</li>
-                                ))}
-                            </ul>
+                            {editing ? (
+                                <div className="mt-3">
+                                    <label
+                                        htmlFor={`optional-section-items-${index}`}
+                                        className="text-sm font-semibold text-gray-700"
+                                    >
+                                        {section.heading} items
+                                    </label>
+
+                                    <p className="mt-1 text-sm text-gray-600">
+                                        Enter one truthful item per line.
+                                    </p>
+
+                                    <textarea
+                                        id={`optional-section-items-${index}`}
+                                        value={draftOptionalSectionItems[index] ?? ""}
+                                        onChange={(event) =>
+                                            setDraftOptionalSectionItems((current) =>
+                                                current.map((value, valueIndex) =>
+                                                    valueIndex === index
+                                                        ? event.target.value
+                                                        : value,
+                                                ),
+                                            )
+                                        }
+                                        rows={5}
+                                        className="mt-2 w-full rounded-xl border border-purple-300 p-4 leading-7 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                            ) : (
+                                <ul className="mt-3 list-disc space-y-2 pl-5 text-gray-700">
+                                    {section.items.map((item, itemIndex) => (
+                                        <li key={`${item}-${itemIndex}`}>
+                                            {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </section>
                     ))}
                 </article>

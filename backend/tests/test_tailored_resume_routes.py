@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.tailored_resume_schema import (
+    TailoredResumeContent,
     TailoredResumeGenerateRequest,
     TailoredResumeUpdateRequest,
 )
@@ -225,6 +226,67 @@ def test_get_tailored_resume_returns_404_when_not_owned(
     assert exc.value.status_code == 404
     assert exc.value.detail == (
         "Tailored resume not found."
+    )
+
+
+def test_export_tailored_resume_requires_authentication():
+    response = client.get("/tailored-resumes/12/export")
+
+    assert response.status_code == 401
+
+
+def test_export_tailored_resume_uses_scoped_resume(
+    monkeypatch,
+):
+    db = MagicMock()
+    user = MagicMock(id=7)
+    tailored_resume = MagicMock()
+    tailored_resume.id = 12
+    tailored_resume.content = TailoredResumeContent(
+        contact={
+            "full_name": "Ada Lovelace",
+            "email": "ada@example.com",
+        },
+        skills=["Python"],
+    ).model_dump(mode="json")
+
+    mock_get_resume = MagicMock(
+        return_value=tailored_resume
+    )
+    mock_renderer = MagicMock(
+        return_value=b"%PDF-export-test"
+    )
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "get_user_tailored_resume",
+        mock_get_resume,
+    )
+    monkeypatch.setattr(
+        tailored_resume_routes,
+        "render_tailored_resume_pdf",
+        mock_renderer,
+    )
+
+    response = tailored_resume_routes.export_tailored_resume(
+        tailored_resume_id=12,
+        db=db,
+        current_user=user,
+    )
+
+    assert response.status_code == 200
+    assert response.media_type == "application/pdf"
+    assert response.body == b"%PDF-export-test"
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="tailored-resume-12.pdf"'
+    )
+    mock_get_resume.assert_called_once_with(
+        tailored_resume_id=12,
+        user_id=7,
+        db=db,
+    )
+    assert (
+        mock_renderer.call_args.args[0].contact.full_name
+        == "Ada Lovelace"
     )
 
 @pytest.mark.parametrize(

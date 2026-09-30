@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Response,
     status,
 )
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from app.dependencies.auth_dependencies import (
     get_current_user,
 )
 from app.models.tailored_resume_schema import (
+    TailoredResumeContent,
     TailoredResumeGenerateRequest,
     TailoredResumeResponse,
     TailoredResumeUpdateRequest,
@@ -26,6 +28,9 @@ from app.services.tailored_resume_service import (
     get_user_tailored_resumes,
     create_user_tailored_resume_version,
     delete_user_tailored_resume,
+)
+from app.services.tailored_resume_export_service import (
+    render_tailored_resume_pdf,
 )
 from app.services.resume_service import (
     ResumeEvidenceError,
@@ -99,6 +104,44 @@ def list_tailored_resumes(
     return get_user_tailored_resumes(
         user_id=current_user.id,
         db=db,
+    )
+
+
+@router.get(
+    "/{tailored_resume_id}/export",
+    response_class=Response,
+)
+def export_tailored_resume(
+    tailored_resume_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    tailored_resume = get_user_tailored_resume(
+        tailored_resume_id=tailored_resume_id,
+        user_id=current_user.id,
+        db=db,
+    )
+
+    if tailored_resume is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tailored resume not found.",
+        )
+
+    content = TailoredResumeContent.model_validate(
+        tailored_resume.content
+    )
+    pdf_bytes = render_tailored_resume_pdf(content)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": (
+                "attachment; "
+                f'filename="tailored-resume-{tailored_resume.id}.pdf"'
+            )
+        },
     )
 
 
