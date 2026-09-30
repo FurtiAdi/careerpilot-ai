@@ -51,6 +51,13 @@ class TailoredResume(Base):
         nullable=False,
     )
 
+    source_resume_id = Column(
+        Integer,
+        ForeignKey("saved_resumes.id"),
+        nullable=True,
+        index=True,
+    )
+
     version_group_id = Column(
         String(36),
         nullable=False,
