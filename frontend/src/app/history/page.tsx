@@ -15,12 +15,25 @@ import {
   getTailoredResumes,
   type TailoredResume,
 } from "@/services/tailoredResumeService"
+import {
+  getSavedResumes,
+  uploadSavedResume,
+  type SavedResume,
+} from "@/services/savedResumeService"
 
 export default function HistoryPage() {
 
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [tailoredResumes, setTailoredResumes] =
     useState<TailoredResume[]>([])
+  const [savedResumes, setSavedResumes] =
+    useState<SavedResume[]>([])
+  const [selectedSavedResumeId, setSelectedSavedResumeId] =
+    useState<number | null>(null)
+  const [selectedResumeFile, setSelectedResumeFile] =
+    useState<File | null>(null)
+  const [uploadingResume, setUploadingResume] =
+    useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] =
     useState<string | null>(null)
@@ -44,15 +57,23 @@ export default function HistoryPage() {
       try {
         setError(null)
 
-        const [analysisData, tailoredResumeData] =
-          await Promise.all([
-            getAnalyses(),
-            getTailoredResumes(),
-          ])
+        const [
+          analysisData,
+          tailoredResumeData,
+          savedResumeData,
+        ] = await Promise.all([
+          getAnalyses(),
+          getTailoredResumes(),
+          getSavedResumes(),
+        ])
 
         if (!cancelled) {
           setAnalyses(analysisData)
           setTailoredResumes(tailoredResumeData)
+          setSavedResumes(savedResumeData)
+          setSelectedSavedResumeId((current) =>
+            current ?? savedResumeData[0]?.id ?? null
+          )
         }
       } catch (error) {
         if (!cancelled) {
@@ -127,12 +148,22 @@ export default function HistoryPage() {
   const generateResume = async (
     analysisId: number
   ) => {
+    if (selectedSavedResumeId === null) {
+      setError(
+        "Upload and select a saved resume before generating."
+      )
+      return
+    }
+
     try {
       setError(null)
       setGeneratingAnalysisId(analysisId)
 
       const tailoredResume =
-        await generateTailoredResume(analysisId)
+        await generateTailoredResume(
+          analysisId,
+          selectedSavedResumeId
+        )
 
       router.push(
         `/tailored-resumes/${tailoredResume.id}`
@@ -145,6 +176,37 @@ export default function HistoryPage() {
       )
     } finally {
       setGeneratingAnalysisId(null)
+    }
+  }
+
+  const uploadSourceResume = async () => {
+    if (selectedResumeFile === null) {
+      setError("Choose a PDF resume to upload.")
+      return
+    }
+
+    try {
+      setError(null)
+      setUploadingResume(true)
+
+      const savedResume = await uploadSavedResume(
+        selectedResumeFile
+      )
+
+      setSavedResumes((previous) => [
+        savedResume,
+        ...previous,
+      ])
+      setSelectedSavedResumeId(savedResume.id)
+      setSelectedResumeFile(null)
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload the source resume."
+      )
+    } finally {
+      setUploadingResume(false)
     }
   }
 
@@ -187,6 +249,75 @@ export default function HistoryPage() {
             {error}
           </div>
         )}
+
+        <section className="mb-10 rounded-2xl border border-purple-500/20 bg-purple-500/10 p-5">
+          <h2 className="text-xl font-semibold text-purple-200">
+            Source Resume
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-400">
+            Select the verified resume that will ground new tailored versions.
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(event) =>
+                setSelectedResumeFile(
+                  event.target.files?.[0] ?? null
+                )
+              }
+              disabled={uploadingResume}
+              className="block text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-purple-500/20 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-purple-200 hover:file:bg-purple-500/30"
+            />
+
+            <button
+              type="button"
+              onClick={uploadSourceResume}
+              disabled={
+                selectedResumeFile === null ||
+                uploadingResume
+              }
+              className="rounded-xl border border-purple-500/40 px-4 py-2 text-sm font-semibold text-purple-200 hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploadingResume
+                ? "Uploading..."
+                : "Upload resume"}
+            </button>
+          </div>
+
+          {selectedResumeFile !== null && (
+            <p className="mt-2 text-sm text-gray-400">
+              Ready to upload: {selectedResumeFile.name}
+            </p>
+          )}
+
+          {savedResumes.length === 0 ? (
+            <p className="mt-4 text-sm text-yellow-200">
+              No saved resumes are available yet.
+            </p>
+          ) : (
+            <select
+              value={selectedSavedResumeId ?? ""}
+              onChange={(event) =>
+                setSelectedSavedResumeId(
+                  Number(event.target.value)
+                )
+              }
+              className="mt-4 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
+            >
+              {savedResumes.map((resume) => (
+                <option
+                  key={resume.id}
+                  value={resume.id}
+                >
+                  {resume.original_filename}
+                </option>
+              ))}
+            </select>
+          )}
+        </section>
 
         {!loading && tailoredResumes.length > 0 && (
           <section className="mb-10">
@@ -343,7 +474,10 @@ export default function HistoryPage() {
                   </div>
                   <button
                     onClick={() => generateResume(analysis.id)}
-                    disabled={generatingAnalysisId !== null}
+                    disabled={
+                      generatingAnalysisId !== null ||
+                      selectedSavedResumeId === null
+                    }
                     className="
                       mt-4 ml-auto block px-4 py-2
                       rounded-xl

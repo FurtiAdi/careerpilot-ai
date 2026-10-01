@@ -69,7 +69,16 @@ def test_tailored_resume_response_rejects_unknown_fields():
 def test_generate_request_rejects_invalid_analysis_id():
     with pytest.raises(ValidationError):
         TailoredResumeGenerateRequest(
-            analysis_id=0
+            analysis_id=0,
+            source_resume_id=21,
+        )
+
+
+def test_generate_request_rejects_invalid_source_resume_id():
+    with pytest.raises(ValidationError):
+        TailoredResumeGenerateRequest(
+            analysis_id=12,
+            source_resume_id=0,
         )
 
 
@@ -77,6 +86,7 @@ def test_generate_request_rejects_client_source_content():
     with pytest.raises(ValidationError):
         TailoredResumeGenerateRequest(
             analysis_id=12,
+            source_resume_id=21,
             source_content={
                 "contact": {
                     "full_name": "Unverified User"
@@ -93,6 +103,7 @@ def test_tailored_resume_response_serializes_orm_record():
         user_id=7,
         source_analysis_id=12,
         source_resume_filename="saved-resume.pdf",
+        source_resume_id=21,
         version_group_id="version-group",
         version_number=1,
         status="draft",

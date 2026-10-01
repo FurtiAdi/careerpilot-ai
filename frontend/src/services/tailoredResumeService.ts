@@ -54,6 +54,7 @@ export interface TailoredResume {
   user_id: number
   source_analysis_id: number
   source_resume_filename: string
+  source_resume_id: number | null
   version_group_id: string
   version_number: number
   status: "draft" | "saved"
@@ -71,7 +72,8 @@ export interface TailoredResumeUpdate {
 }
 
 export async function generateTailoredResume(
-  analysisId: number
+  analysisId: number,
+  sourceResumeId: number
 ): Promise<TailoredResume> {
   return authenticatedApiRequest<TailoredResume>(
     "/tailored-resumes",
@@ -79,6 +81,7 @@ export async function generateTailoredResume(
       method: "POST",
       body: JSON.stringify({
         analysis_id: analysisId,
+        source_resume_id: sourceResumeId,
       }),
     }
   )

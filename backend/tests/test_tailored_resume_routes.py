@@ -27,7 +27,8 @@ client = TestClient(app)
 
 def make_request() -> TailoredResumeGenerateRequest:
     return TailoredResumeGenerateRequest(
-        analysis_id=12
+        analysis_id=12,
+        source_resume_id=21,
     )
 
 
@@ -36,6 +37,7 @@ def test_generate_tailored_resume_requires_authentication():
         "/tailored-resumes",
         json={
             "analysis_id": 12,
+            "source_resume_id": 21,
         },
     )
 
@@ -70,6 +72,7 @@ def test_generate_tailored_resume_calls_scoped_service(
     assert result is generated_resume
     mock_service.assert_called_once_with(
         analysis_id=12,
+        source_resume_id=21,
         current_user=user,
         db=db,
     )

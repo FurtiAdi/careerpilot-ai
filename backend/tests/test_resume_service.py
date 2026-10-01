@@ -411,3 +411,53 @@ def test_saved_resume_is_extracted_and_grounded(
     mock_ground.assert_called_once_with(
         "Verified resume text"
     )
+
+
+def test_saved_resume_record_is_extracted_and_grounded(
+    tmp_path,
+    monkeypatch,
+):
+    resume_path = tmp_path / "selected-resume.pdf"
+    resume_path.write_bytes(b"%PDF-1.4 test")
+
+    monkeypatch.setattr(
+        resume_service.settings,
+        "RESUME_DIR",
+        str(tmp_path),
+    )
+
+    mock_extract = MagicMock(
+        return_value="Verified selected resume text"
+    )
+    structured_content = make_structured_resume()
+    mock_ground = MagicMock(
+        return_value=structured_content
+    )
+
+    monkeypatch.setattr(
+        resume_service,
+        "extract_text_from_pdf",
+        mock_extract,
+    )
+    monkeypatch.setattr(
+        resume_service,
+        "build_grounded_resume_content",
+        mock_ground,
+    )
+
+    result = (
+        resume_service
+        .build_grounded_saved_resume_content_from_record(
+            SimpleNamespace(
+                storage_filename="selected-resume.pdf"
+            )
+        )
+    )
+
+    assert result is structured_content
+    mock_extract.assert_called_once_with(
+        str(resume_path)
+    )
+    mock_ground.assert_called_once_with(
+        "Verified selected resume text"
+    )

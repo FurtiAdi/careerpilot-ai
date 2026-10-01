@@ -57,6 +57,7 @@ def generate_tailored_resume_draft(
     try:
         tailored_resume = create_tailored_resume_for_user(
             analysis_id=request.analysis_id,
+            source_resume_id=request.source_resume_id,
             current_user=current_user,
             db=db,
         )

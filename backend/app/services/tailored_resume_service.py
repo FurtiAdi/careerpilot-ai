@@ -18,7 +18,11 @@ from app.skills.requirements import (
 )
 from app.skills.scorer import calculate_match_score
 from app.services.resume_service import (
-    build_grounded_saved_resume_content,
+    SavedResumeNotFoundError,
+    build_grounded_saved_resume_content_from_record,
+)
+from app.services.saved_resume_service import (
+    get_user_saved_resume,
 )
 
 def build_analysis_match_snapshot(
@@ -211,6 +215,7 @@ def validate_tailored_resume_grounding(
 
 def create_tailored_resume_for_user(
     analysis_id: int,
+    source_resume_id: int,
     current_user: User,
     db: Session,
 ) -> TailoredResume | None:
@@ -222,9 +227,20 @@ def create_tailored_resume_for_user(
     if analysis is None:
         return None
 
+    saved_resume = get_user_saved_resume(
+        saved_resume_id=source_resume_id,
+        user_id=current_user.id,
+        db=db,
+    )
+
+    if saved_resume is None:
+        raise SavedResumeNotFoundError(
+            "The selected source resume was not found."
+        )
+
     source_content = (
-        build_grounded_saved_resume_content(
-            current_user
+        build_grounded_saved_resume_content_from_record(
+            saved_resume
         )
     )
 
@@ -247,9 +263,8 @@ def create_tailored_resume_for_user(
     tailored_resume = TailoredResume(
         user_id=current_user.id,
         source_analysis_id=analysis.id,
-        source_resume_filename=(
-            current_user.resume_filename
-        ),
+        source_resume_filename=saved_resume.storage_filename,
+        source_resume_id=saved_resume.id,
         version_group_id=str(uuid4()),
         version_number=1,
         status="draft",

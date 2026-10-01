@@ -168,7 +168,6 @@ def test_create_tailored_resume_persists_grounded_result(
     db = MagicMock()
     user = SimpleNamespace(
         id=7,
-        resume_filename="saved-resume.pdf",
     )
     analysis = SimpleNamespace(
         id=12,
@@ -182,6 +181,10 @@ def test_create_tailored_resume_persists_grounded_result(
     )
 
     source = make_grounding_source()
+    saved_resume = SimpleNamespace(
+        id=21,
+        storage_filename="selected-resume.pdf",
+    )
     generated = TailoredResumeAIResponse(
         content=source,
         emphasized_items=["Python"],
@@ -193,12 +196,20 @@ def test_create_tailored_resume_persists_grounded_result(
         "missing_preferred_skills": [],
     }
 
+    mock_saved_resume = MagicMock(
+        return_value=saved_resume
+    )
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "get_user_saved_resume",
+        mock_saved_resume,
+    )
     mock_source_loader = MagicMock(
         return_value=source
     )
     monkeypatch.setattr(
         tailored_resume_service,
-        "build_grounded_saved_resume_content",
+        "build_grounded_saved_resume_content_from_record",
         mock_source_loader,
     )
     monkeypatch.setattr(
@@ -222,6 +233,7 @@ def test_create_tailored_resume_persists_grounded_result(
         tailored_resume_service
         .create_tailored_resume_for_user(
             analysis_id=12,
+            source_resume_id=21,
             current_user=user,
             db=db,
         )
@@ -230,8 +242,9 @@ def test_create_tailored_resume_persists_grounded_result(
     assert result.user_id == 7
     assert result.source_analysis_id == 12
     assert result.source_resume_filename == (
-        "saved-resume.pdf"
+        "selected-resume.pdf"
     )
+    assert result.source_resume_id == 21
     assert result.content == source.model_dump(
         mode="json"
     )
@@ -248,9 +261,12 @@ def test_create_tailored_resume_persists_grounded_result(
         generated=generated.content,
         match_snapshot=snapshot,
     )
-    mock_source_loader.assert_called_once_with(
-        user
+    mock_saved_resume.assert_called_once_with(
+        saved_resume_id=21,
+        user_id=7,
+        db=db,
     )
+    mock_source_loader.assert_called_once_with(saved_resume)
 
 
 def test_create_tailored_resume_rejects_non_owned_analysis(
@@ -271,7 +287,7 @@ def test_create_tailored_resume_rejects_non_owned_analysis(
     mock_source_loader = MagicMock()
     monkeypatch.setattr(
         tailored_resume_service,
-        "build_grounded_saved_resume_content",
+        "build_grounded_saved_resume_content_from_record",
         mock_source_loader,
     )
 
@@ -279,15 +295,64 @@ def test_create_tailored_resume_rejects_non_owned_analysis(
         tailored_resume_service
         .create_tailored_resume_for_user(
             analysis_id=99,
+            source_resume_id=21,
             current_user=SimpleNamespace(
                 id=7,
-                resume_filename="saved-resume.pdf",
             ),
             db=db,
         )
     )
 
     assert result is None
+    mock_source_loader.assert_not_called()
+    mock_generate.assert_not_called()
+    db.add.assert_not_called()
+    db.commit.assert_not_called()
+
+
+def test_create_tailored_resume_rejects_non_owned_source_resume(
+    monkeypatch,
+):
+    db = MagicMock()
+    analysis = SimpleNamespace(
+        id=12,
+        user_id=7,
+        job_description="Python role",
+        candidate_skills="Python",
+    )
+    db.query.return_value.filter.return_value.first.return_value = (
+        analysis
+    )
+
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "get_user_saved_resume",
+        MagicMock(return_value=None),
+    )
+    mock_source_loader = MagicMock()
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "build_grounded_saved_resume_content_from_record",
+        mock_source_loader,
+    )
+    mock_generate = MagicMock()
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "generate_tailored_resume",
+        mock_generate,
+    )
+
+    with pytest.raises(
+        tailored_resume_service.SavedResumeNotFoundError,
+        match="selected source resume",
+    ):
+        tailored_resume_service.create_tailored_resume_for_user(
+            analysis_id=12,
+            source_resume_id=99,
+            current_user=SimpleNamespace(id=7),
+            db=db,
+        )
+
     mock_source_loader.assert_not_called()
     mock_generate.assert_not_called()
     db.add.assert_not_called()
@@ -304,7 +369,6 @@ def test_create_tailored_resume_rolls_back_on_commit_error(
 
     user = SimpleNamespace(
         id=7,
-        resume_filename="saved-resume.pdf",
     )
     analysis = SimpleNamespace(
         id=12,
@@ -318,13 +382,22 @@ def test_create_tailored_resume_rolls_back_on_commit_error(
     )
 
     source = make_grounding_source()
+    saved_resume = SimpleNamespace(
+        id=21,
+        storage_filename="selected-resume.pdf",
+    )
     generated = TailoredResumeAIResponse(
         content=source
     )
 
     monkeypatch.setattr(
         tailored_resume_service,
-        "build_grounded_saved_resume_content",
+        "get_user_saved_resume",
+        MagicMock(return_value=saved_resume),
+    )
+    monkeypatch.setattr(
+        tailored_resume_service,
+        "build_grounded_saved_resume_content_from_record",
         MagicMock(return_value=source),
     )
 
@@ -352,6 +425,7 @@ def test_create_tailored_resume_rolls_back_on_commit_error(
             tailored_resume_service
             .create_tailored_resume_for_user(
                 analysis_id=12,
+                source_resume_id=21,
                 current_user=user,
                 db=db,
             )

@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.models.tailored_resume_schema import (
     TailoredResumeContent,
 )
+from app.models.saved_resume_model import SavedResume
 from app.models.user_model import User
 from app.services.ai_service import structure_resume_text
 
@@ -353,11 +354,9 @@ def extract_text_from_pdf(pdf_path: str):
     return extracted_text
 
 
-def build_grounded_saved_resume_content(
-    current_user: User,
+def _build_grounded_resume_content_from_filename(
+    filename: str | None,
 ) -> TailoredResumeContent:
-    filename = current_user.resume_filename
-
     if not filename:
         raise SavedResumeNotFoundError(
             "A saved source resume is required."
@@ -385,10 +384,21 @@ def build_grounded_saved_resume_content(
             "The saved source resume was not found."
         )
 
-    resume_text = extract_text_from_pdf(
-        resume_path
+    resume_text = extract_text_from_pdf(resume_path)
+
+    return build_grounded_resume_content(resume_text)
+
+
+def build_grounded_saved_resume_content(
+    current_user: User,
+) -> TailoredResumeContent:
+    return _build_grounded_resume_content_from_filename(
+        current_user.resume_filename
     )
 
-    return build_grounded_resume_content(
-        resume_text
+def build_grounded_saved_resume_content_from_record(
+    saved_resume: SavedResume,
+) -> TailoredResumeContent:
+    return _build_grounded_resume_content_from_filename(
+        saved_resume.storage_filename
     )

@@ -100,6 +100,7 @@ class TailoredResumeAIResponse(StrictSchema):
 
 class TailoredResumeGenerateRequest(StrictSchema):
     analysis_id: int = Field(gt=0)
+    source_resume_id: int = Field(gt=0)
 
 
 class TailoredResumeResponse(StrictSchema):
@@ -112,6 +113,7 @@ class TailoredResumeResponse(StrictSchema):
     user_id: int
     source_analysis_id: int
     source_resume_filename: str
+    source_resume_id: int | None
     version_group_id: str
     version_number: int
     status: Literal["draft", "saved"]
