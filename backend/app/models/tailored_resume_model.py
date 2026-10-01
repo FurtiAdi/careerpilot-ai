@@ -1,0 +1,116 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    UniqueConstraint,
+)
+
+from app.database.database import Base
+
+
+class TailoredResume(Base):
+    __tablename__ = "tailored_resumes"
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('draft', 'saved')",
+            name="ck_tailored_resumes_status",
+        ),
+        UniqueConstraint(
+            "user_id",
+            "version_group_id",
+            "version_number",
+            name="uq_tailored_resume_version",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    source_analysis_id = Column(
+        Integer,
+        ForeignKey("analyses.id"),
+        nullable=False,
+        index=True,
+    )
+
+    source_resume_filename = Column(
+        String,
+        nullable=False,
+    )
+
+    source_resume_id = Column(
+        Integer,
+        ForeignKey("saved_resumes.id"),
+        nullable=True,
+        index=True,
+    )
+
+    version_group_id = Column(
+        String(36),
+        nullable=False,
+        index=True,
+    )
+
+    version_number = Column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+    )
+
+    status = Column(
+        String(20),
+        nullable=False,
+        default="draft",
+        server_default="draft",
+    )
+
+    content = Column(
+        JSON,
+        nullable=False,
+    )
+
+    emphasized_items = Column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default="[]",
+    )
+
+    reordered_items = Column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default="[]",
+    )
+
+    match_snapshot = Column(
+        JSON,
+        nullable=False,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )

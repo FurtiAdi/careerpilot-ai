@@ -7,7 +7,9 @@ from sqlalchemy import pool
 from app.core.config import settings
 from app.database.database import Base
 from app.models.analysis_model import Analysis
+from app.models.tailored_resume_model import TailoredResume
 from app.models.user_model import User
+from app.models.saved_resume_model import SavedResume
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

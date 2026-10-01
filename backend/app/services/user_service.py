@@ -1,10 +1,13 @@
 import os
 
+from pathlib import Path
+
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 
 from app.models.user_model import User
+from app.models.saved_resume_model import SavedResume
 
 from app.services.auth_service import (
     hash_password,
@@ -52,6 +55,7 @@ def register_user(
     email: str,
     password: str,
     resume_content: bytes | None,
+    resume_original_filename: str | None,
     profile_picture_content: bytes | None,
     profile_picture_content_type: str | None,
     db: Session
@@ -142,6 +146,21 @@ def register_user(
     db.add(new_user)
 
     try:
+        db.flush()
+
+        if resume_filename:
+            original_filename = Path(
+                (resume_original_filename or "resume.pdf")
+                .replace("\\", "/")
+            ).name or "resume.pdf"
+
+            saved_resume = SavedResume(
+                user_id=new_user.id,
+                storage_filename=resume_filename,
+                original_filename=original_filename,
+            )
+            db.add(saved_resume)
+
         db.commit()
     except Exception:
         db.rollback()

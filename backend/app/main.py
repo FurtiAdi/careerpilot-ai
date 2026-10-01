@@ -11,7 +11,13 @@ from app.routes.analysis_routes import router as analysis_router
 from app.routes.auth_routes import router as auth_router
 from app.routes.profile_routes import router as profile_router
 from app.routes.resume_routes import router as resume_router
+from app.routes.saved_resume_routes import (
+    router as saved_resume_router,
+)
 
+from app.routes.tailored_resume_routes import (
+    router as tailored_resume_router,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,3 +80,5 @@ app.include_router(analysis_router)
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(resume_router)
+app.include_router(saved_resume_router)
+app.include_router(tailored_resume_router)

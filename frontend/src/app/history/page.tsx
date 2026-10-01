@@ -9,42 +9,93 @@ import {
   deleteAnalysisById,
 } from "@/services/analysisService"
 
+import {
+  deleteTailoredResume,
+  generateTailoredResume,
+  getTailoredResumes,
+  type TailoredResume,
+} from "@/services/tailoredResumeService"
+import {
+  getSavedResumes,
+  uploadSavedResume,
+  type SavedResume,
+} from "@/services/savedResumeService"
+
 export default function HistoryPage() {
 
   const [analyses, setAnalyses] = useState<Analysis[]>([])
+  const [tailoredResumes, setTailoredResumes] =
+    useState<TailoredResume[]>([])
+  const [savedResumes, setSavedResumes] =
+    useState<SavedResume[]>([])
+  const [selectedSavedResumeId, setSelectedSavedResumeId] =
+    useState<number | null>(null)
+  const [selectedResumeFile, setSelectedResumeFile] =
+    useState<File | null>(null)
+  const [uploadingResume, setUploadingResume] =
+    useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] =
     useState<string | null>(null)
+  const [generatingAnalysisId, setGeneratingAnalysisId] =
+    useState<number | null>(null)
+  const [deletingTailoredResumeId, setDeletingTailoredResumeId] =
+    useState<number | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    const token = localStorage.getItem(
-      "token"
-    )
+    const token = localStorage.getItem("token")
+
     if (!token) {
       router.push("/login")
       return
     }
-    fetchAnalyses()
-  }, [])
 
-  const fetchAnalyses = async () => {
-    try {
-      setError(null)
+    let cancelled = false
 
-      const data = await getAnalyses()
+    const loadHistory = async () => {
+      try {
+        setError(null)
 
-      setAnalyses(data)
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load analyses."
-      )
-    } finally {
-      setLoading(false)
+        const [
+          analysisData,
+          tailoredResumeData,
+          savedResumeData,
+        ] = await Promise.all([
+          getAnalyses(),
+          getTailoredResumes(),
+          getSavedResumes(),
+        ])
+
+        if (!cancelled) {
+          setAnalyses(analysisData)
+          setTailoredResumes(tailoredResumeData)
+          setSavedResumes(savedResumeData)
+          setSelectedSavedResumeId((current) =>
+            current ?? savedResumeData[0]?.id ?? null
+          )
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load history."
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
-  }
+
+    void loadHistory()
+
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   const deleteAnalysis = async (
     id: number
@@ -66,6 +117,96 @@ export default function HistoryPage() {
           ? error.message
           : "Failed to delete analysis."
       )
+    }
+  }
+
+  const deleteTailoredResumeCard = async (
+    id: number
+  ) => {
+    try {
+      setError(null)
+      setDeletingTailoredResumeId(id)
+
+      await deleteTailoredResume(id)
+
+      setTailoredResumes((previous) =>
+        previous.filter(
+          (resume) => resume.id !== id
+        )
+      )
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete tailored resume."
+      )
+    } finally {
+      setDeletingTailoredResumeId(null)
+    }
+  }
+
+  const generateResume = async (
+    analysisId: number
+  ) => {
+    if (selectedSavedResumeId === null) {
+      setError(
+        "Upload and select a saved resume before generating."
+      )
+      return
+    }
+
+    try {
+      setError(null)
+      setGeneratingAnalysisId(analysisId)
+
+      const tailoredResume =
+        await generateTailoredResume(
+          analysisId,
+          selectedSavedResumeId
+        )
+
+      router.push(
+        `/tailored-resumes/${tailoredResume.id}`
+      )
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate tailored resume."
+      )
+    } finally {
+      setGeneratingAnalysisId(null)
+    }
+  }
+
+  const uploadSourceResume = async () => {
+    if (selectedResumeFile === null) {
+      setError("Choose a PDF resume to upload.")
+      return
+    }
+
+    try {
+      setError(null)
+      setUploadingResume(true)
+
+      const savedResume = await uploadSavedResume(
+        selectedResumeFile
+      )
+
+      setSavedResumes((previous) => [
+        savedResume,
+        ...previous,
+      ])
+      setSelectedSavedResumeId(savedResume.id)
+      setSelectedResumeFile(null)
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload the source resume."
+      )
+    } finally {
+      setUploadingResume(false)
     }
   }
 
@@ -107,6 +248,146 @@ export default function HistoryPage() {
           >
             {error}
           </div>
+        )}
+
+        <section className="mb-10 rounded-2xl border border-purple-500/20 bg-purple-500/10 p-5">
+          <h2 className="text-xl font-semibold text-purple-200">
+            Source Resume
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-400">
+            Select the verified resume that will ground new tailored versions.
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(event) =>
+                setSelectedResumeFile(
+                  event.target.files?.[0] ?? null
+                )
+              }
+              disabled={uploadingResume}
+              className="block text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-purple-500/20 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-purple-200 hover:file:bg-purple-500/30"
+            />
+
+            <button
+              type="button"
+              onClick={uploadSourceResume}
+              disabled={
+                selectedResumeFile === null ||
+                uploadingResume
+              }
+              className="rounded-xl border border-purple-500/40 px-4 py-2 text-sm font-semibold text-purple-200 hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploadingResume
+                ? "Uploading..."
+                : "Upload resume"}
+            </button>
+          </div>
+
+          {selectedResumeFile !== null && (
+            <p className="mt-2 text-sm text-gray-400">
+              Ready to upload: {selectedResumeFile.name}
+            </p>
+          )}
+
+          {savedResumes.length === 0 ? (
+            <p className="mt-4 text-sm text-yellow-200">
+              No saved resumes are available yet.
+            </p>
+          ) : (
+            <select
+              value={selectedSavedResumeId ?? ""}
+              onChange={(event) =>
+                setSelectedSavedResumeId(
+                  Number(event.target.value)
+                )
+              }
+              className="mt-4 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
+            >
+              {savedResumes.map((resume) => (
+                <option
+                  key={resume.id}
+                  value={resume.id}
+                >
+                  {resume.original_filename}
+                </option>
+              ))}
+            </select>
+          )}
+        </section>
+
+        {!loading && tailoredResumes.length > 0 && (
+          <section className="mb-10">
+            <div className="mb-5">
+              <h2 className="text-2xl font-semibold text-purple-200">
+                Tailored Resumes
+              </h2>
+
+              <p className="mt-1 text-gray-400">
+                Open a saved resume version or continue editing it.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {tailoredResumes.map((resume) => (
+                <article
+                  key={resume.id}
+                  className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-5"
+                >
+                  <p className="text-sm text-purple-300">
+                    Analysis #{resume.source_analysis_id}
+                  </p>
+
+                  <h3 className="mt-2 text-lg font-semibold">
+                    {resume.content.contact.full_name ??
+                      "Tailored Resume"}
+                  </h3>
+
+                  <p className="mt-1 text-sm text-gray-400">
+                    Version {resume.version_number} · {resume.status}
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Updated{" "}
+                    {new Date(
+                      resume.updated_at
+                    ).toLocaleDateString()}
+                  </p>
+
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/tailored-resumes/${resume.id}`
+                      )
+                    }
+                    className="mt-4 rounded-xl border border-purple-500/40 px-4 py-2 text-sm font-semibold text-purple-200 hover:bg-purple-500/10"
+                  >
+                    Open resume
+                  </button>
+                  <button
+                    onClick={() => {
+                      const confirmed = window.confirm(
+                        "Delete this tailored resume version?"
+                      )
+
+                      if (confirmed) {
+                        void deleteTailoredResumeCard(resume.id)
+                      }
+                    }}
+                    disabled={deletingTailoredResumeId !== null}
+                    className="ml-3 rounded-xl border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deletingTailoredResumeId === resume.id
+                      ? "Deleting..."
+                      : "Delete"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
         )}
 
         <div className="grid gap-6">
@@ -191,6 +472,28 @@ export default function HistoryPage() {
                   >
                     {analysis.match_score}%
                   </div>
+                  <button
+                    onClick={() => generateResume(analysis.id)}
+                    disabled={
+                      generatingAnalysisId !== null ||
+                      selectedSavedResumeId === null
+                    }
+                    className="
+                      mt-4 ml-auto block px-4 py-2
+                      rounded-xl
+                      bg-purple-500/20
+                      border border-purple-500/30
+                      text-purple-200
+                      hover:bg-purple-500/30
+                      disabled:cursor-not-allowed
+                      disabled:opacity-50
+                      transition-all duration-300
+                    "
+                  >
+                    {generatingAnalysisId === analysis.id
+                      ? "Generating..."
+                      : "Generate Tailored Resume"}
+                  </button>
 
                   <button
                     onClick={() => {
@@ -205,7 +508,7 @@ export default function HistoryPage() {
 
                     }}
                     className="
-                      mt-4 px-4 py-2
+                      mt-4 ml-auto block px-4 py-2
                       rounded-xl
                       bg-red-500/10
                       border border-red-500/20

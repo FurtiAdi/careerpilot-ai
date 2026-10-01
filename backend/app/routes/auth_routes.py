@@ -58,6 +58,9 @@ async def register_user_route(
         email=email,
         password=password,
         resume_content=resume_content,
+        resume_original_filename=(
+            resume.filename if resume else None
+        ),
         profile_picture_content=profile_picture_content,
         profile_picture_content_type=(
             profile_picture.content_type
