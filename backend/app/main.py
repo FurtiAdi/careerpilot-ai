@@ -14,9 +14,11 @@ from app.routes.resume_routes import router as resume_router
 from app.routes.saved_resume_routes import (
     router as saved_resume_router,
 )
-
 from app.routes.tailored_resume_routes import (
     router as tailored_resume_router,
+)
+from app.routes.cover_letter_routes import (
+    router as cover_letter_router,
 )
 
 logger = logging.getLogger(__name__)
@@ -82,3 +84,4 @@ app.include_router(profile_router)
 app.include_router(resume_router)
 app.include_router(saved_resume_router)
 app.include_router(tailored_resume_router)
+app.include_router(cover_letter_router)

@@ -20,12 +20,21 @@ import {
   uploadSavedResume,
   type SavedResume,
 } from "@/services/savedResumeService"
+import {
+  generateCoverLetter,
+  getCoverLetters,
+  type CoverLetter,
+  type CoverLetterLength,
+  type CoverLetterTone,
+} from "@/services/coverLetterService"
 
 export default function HistoryPage() {
 
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [tailoredResumes, setTailoredResumes] =
     useState<TailoredResume[]>([])
+  const [coverLetters, setCoverLetters] =
+    useState<CoverLetter[]>([])
   const [savedResumes, setSavedResumes] =
     useState<SavedResume[]>([])
   const [selectedSavedResumeId, setSelectedSavedResumeId] =
@@ -39,6 +48,14 @@ export default function HistoryPage() {
     useState<string | null>(null)
   const [generatingAnalysisId, setGeneratingAnalysisId] =
     useState<number | null>(null)
+  const [
+    generatingCoverLetterAnalysisId,
+    setGeneratingCoverLetterAnalysisId,
+  ] = useState<number | null>(null)
+  const [coverLetterTone, setCoverLetterTone] =
+    useState<CoverLetterTone>("professional")
+  const [coverLetterLength, setCoverLetterLength] =
+    useState<CoverLetterLength>("standard")
   const [deletingTailoredResumeId, setDeletingTailoredResumeId] =
     useState<number | null>(null)
   const router = useRouter()
@@ -61,16 +78,19 @@ export default function HistoryPage() {
           analysisData,
           tailoredResumeData,
           savedResumeData,
+          coverLetterData,
         ] = await Promise.all([
           getAnalyses(),
           getTailoredResumes(),
           getSavedResumes(),
+          getCoverLetters(),
         ])
 
         if (!cancelled) {
           setAnalyses(analysisData)
           setTailoredResumes(tailoredResumeData)
           setSavedResumes(savedResumeData)
+          setCoverLetters(coverLetterData)
           setSelectedSavedResumeId((current) =>
             current ?? savedResumeData[0]?.id ?? null
           )
@@ -176,6 +196,39 @@ export default function HistoryPage() {
       )
     } finally {
       setGeneratingAnalysisId(null)
+    }
+  }
+
+  const generateLetter = async (
+    analysisId: number
+  ) => {
+    if (selectedSavedResumeId === null) {
+      setError(
+        "Upload and select a saved resume before generating."
+      )
+      return
+    }
+
+    try {
+      setError(null)
+      setGeneratingCoverLetterAnalysisId(analysisId)
+
+      const coverLetter = await generateCoverLetter({
+        analysis_id: analysisId,
+        source_resume_id: selectedSavedResumeId,
+        tone: coverLetterTone,
+        length: coverLetterLength,
+      })
+
+      router.push(`/cover-letters/${coverLetter.id}`)
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate cover letter."
+      )
+    } finally {
+      setGeneratingCoverLetterAnalysisId(null)
     }
   }
 
@@ -317,6 +370,42 @@ export default function HistoryPage() {
               ))}
             </select>
           )}
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <label className="text-sm text-gray-300">
+              Tone
+              <select
+                value={coverLetterTone}
+                onChange={(event) =>
+                  setCoverLetterTone(
+                    event.target.value as CoverLetterTone
+                  )
+                }
+                className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
+              >
+                <option value="professional">
+                  Professional
+                </option>
+                <option value="warm">Warm</option>
+                <option value="concise">Concise</option>
+              </select>
+            </label>
+
+            <label className="text-sm text-gray-300">
+              Length
+              <select
+                value={coverLetterLength}
+                onChange={(event) =>
+                  setCoverLetterLength(
+                    event.target.value as CoverLetterLength
+                  )
+                }
+                className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
+              >
+                <option value="standard">Standard</option>
+                <option value="short">Short</option>
+              </select>
+            </label>
+          </div>
         </section>
 
         {!loading && tailoredResumes.length > 0 && (
@@ -383,6 +472,64 @@ export default function HistoryPage() {
                     {deletingTailoredResumeId === resume.id
                       ? "Deleting..."
                       : "Delete"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {!loading && coverLetters.length > 0 && (
+          <section className="mb-10">
+            <div className="mb-5">
+              <h2 className="text-2xl font-semibold text-pink-200">
+                Cover Letters
+              </h2>
+
+              <p className="mt-1 text-gray-400">
+                Open a generated cover letter or continue editing it.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {coverLetters.map((coverLetter) => (
+                <article
+                  key={coverLetter.id}
+                  className="rounded-2xl border border-pink-500/20 bg-pink-500/10 p-5"
+                >
+                  <p className="text-sm text-pink-300">
+                    Analysis #{coverLetter.source_analysis_id}
+                  </p>
+
+                  <h3 className="mt-2 text-lg font-semibold">
+                    Cover Letter
+                  </h3>
+
+                  <p className="mt-1 text-sm text-gray-400">
+                    Version {coverLetter.version_number} ·{" "}
+                    {coverLetter.status}
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    {coverLetter.tone} · {coverLetter.length}
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Updated{" "}
+                    {new Date(
+                      coverLetter.updated_at
+                    ).toLocaleDateString()}
+                  </p>
+
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/cover-letters/${coverLetter.id}`
+                      )
+                    }
+                    className="mt-4 rounded-xl border border-pink-500/40 px-4 py-2 text-sm font-semibold text-pink-200 hover:bg-pink-500/10"
+                  >
+                    Open cover letter
                   </button>
                 </article>
               ))}
@@ -493,6 +640,29 @@ export default function HistoryPage() {
                     {generatingAnalysisId === analysis.id
                       ? "Generating..."
                       : "Generate Tailored Resume"}
+                  </button>
+
+                  <button
+                    onClick={() => generateLetter(analysis.id)}
+                    disabled={
+                      generatingCoverLetterAnalysisId !== null ||
+                      selectedSavedResumeId === null
+                    }
+                    className="
+                      mt-3 ml-auto block px-4 py-2
+                      rounded-xl
+                      bg-pink-500/20
+                      border border-pink-500/30
+                      text-pink-200
+                      hover:bg-pink-500/30
+                      disabled:cursor-not-allowed
+                      disabled:opacity-50
+                      transition-all duration-300
+                    "
+                  >
+                    {generatingCoverLetterAnalysisId === analysis.id
+                      ? "Generating..."
+                      : "Generate Cover Letter"}
                   </button>
 
                   <button

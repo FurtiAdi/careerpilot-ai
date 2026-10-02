@@ -5,9 +5,14 @@ from app.models.tailored_resume_schema import (
     TailoredResumeAIResponse,
     TailoredResumeContent,
 )
+from app.models.cover_letter_schema import (
+    CoverLetterAIResponse,
+)
 from app.services.ai_prompts import (
     AI_ANALYSIS_SYSTEM_PROMPT,
     TAILORED_RESUME_SYSTEM_PROMPT,
+    COVER_LETTER_SYSTEM_PROMPT,
+    build_cover_letter_prompt,
     build_analysis_prompt,
     build_tailored_resume_prompt,
     RESUME_STRUCTURE_SYSTEM_PROMPT,
@@ -29,6 +34,8 @@ class AIAnalysisError(Exception):
 class TailoredResumeGenerationError(Exception):
     """Raised when a tailored resume cannot be generated safely."""
 
+class CoverLetterGenerationError(Exception):
+    """Raised when a cover letter cannot be generated safely."""
 
 class ResumeStructuringError(Exception):
     """Raised when resume text cannot be structured safely."""
@@ -137,6 +144,57 @@ def generate_tailored_resume(
     except OpenAIError as exc:
         raise TailoredResumeGenerationError(
             "Tailored resume generation is temporarily unavailable."
+        ) from exc
+
+
+def generate_cover_letter(
+    resume_content: TailoredResumeContent,
+    job_description: str,
+    match_snapshot: dict[str, object],
+    tone: str,
+    length: str,
+) -> CoverLetterAIResponse:
+    prompt = build_cover_letter_prompt(
+        resume_content=resume_content,
+        job_description=job_description,
+        match_snapshot=match_snapshot,
+        tone=tone,
+        length=length,
+    )
+
+    try:
+        response = client.beta.chat.completions.parse(
+            model=settings.AI_ANALYSIS_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": COVER_LETTER_SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            response_format=CoverLetterAIResponse,
+        )
+
+        message = response.choices[0].message
+
+        if message.refusal:
+            raise CoverLetterGenerationError(
+                "The AI provider refused to generate a cover letter."
+            )
+
+        if message.parsed is None:
+            raise CoverLetterGenerationError(
+                "The cover letter response could not be parsed."
+            )
+
+        return message.parsed
+
+    except OpenAIError as exc:
+        raise CoverLetterGenerationError(
+            "Cover letter generation is temporarily unavailable."
         ) from exc
 
 
