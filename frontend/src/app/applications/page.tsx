@@ -1,32 +1,15 @@
 "use client"
 
-import {
-  useEffect,
-  useState,
-  type FormEvent,
-} from "react"
+import { useEffect, useState } from "react"
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import {
-  createApplication,
   getApplications,
   type Application,
   type ApplicationStatus,
 } from "@/services/applicationService"
-import {
-  getAnalyses,
-  type Analysis,
-} from "@/services/analysisService"
-import {
-  getTailoredResumes,
-  type TailoredResume,
-} from "@/services/tailoredResumeService"
-import {
-  getCoverLetters,
-  type CoverLetter,
-} from "@/services/coverLetterService"
 
 const applicationStatuses: ApplicationStatus[] = [
   "saved",
@@ -57,31 +40,6 @@ export default function ApplicationsPage() {
     >([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [creating, setCreating] = useState(false)
-    const [company, setCompany] = useState("")
-    const [role, setRole] = useState("")
-    const [status, setStatus] = useState<ApplicationStatus>("saved")
-    const [jobUrl, setJobUrl] = useState("")
-    const [jobDescription, setJobDescription] = useState("")
-    const [appliedAt, setAppliedAt] = useState("")
-    const [nextActionDate, setNextActionDate] = useState("")
-    const [notes, setNotes] = useState("")
-    const [analyses, setAnalyses] = useState<Analysis[]>([])
-    const [tailoredResumes, setTailoredResumes] = useState<
-        TailoredResume[]
-    >([])
-    const [coverLetters, setCoverLetters] = useState<
-        CoverLetter[]
-    >([])
-
-    const [selectedAnalysisId, setSelectedAnalysisId] =
-        useState<number | null>(null)
-    const [
-        selectedTailoredResumeId,
-        setSelectedTailoredResumeId,
-    ] = useState<number | null>(null)
-    const [selectedCoverLetterId, setSelectedCoverLetterId] =
-        useState<number | null>(null)
     const [statusFilter, setStatusFilter] = useState<
         ApplicationStatus | "all"
     >("all")
@@ -104,24 +62,11 @@ export default function ApplicationsPage() {
             try {
                 setError(null)
 
-                const [
-                    applicationData,
-                    analysisData,
-                    tailoredResumeData,
-                    coverLetterData,
-                    ] = await Promise.all([
-                    getApplications(),
-                    getAnalyses(),
-                    getTailoredResumes(),
-                    getCoverLetters(),
-                    ])
+                const applicationData = await getApplications()
 
-                    if (!cancelled) {
+                if (!cancelled) {
                     setApplications(applicationData)
-                    setAnalyses(analysisData)
-                    setTailoredResumes(tailoredResumeData)
-                    setCoverLetters(coverLetterData)
-                    }
+                }
             } catch (error) {
                 if (!cancelled) {
                 setError(
@@ -143,61 +88,6 @@ export default function ApplicationsPage() {
             cancelled = true
         }
     }, [router])
-
-    const createTrackedApplication = async (
-        event: FormEvent<HTMLFormElement>
-        ) => {
-        event.preventDefault()
-
-        if (!company.trim() || !role.trim()) {
-            setError("Company and role are required.")
-            return
-        }
-
-        try {
-            setCreating(true)
-            setError(null)
-
-            const application = await createApplication({
-            company: company.trim(),
-            role: role.trim(),
-            status,
-            job_url: jobUrl.trim() || undefined,
-            job_description: jobDescription.trim() || undefined,
-            applied_at: appliedAt || undefined,
-            next_action_date: nextActionDate || undefined,
-            notes: notes.trim() || undefined,
-            analysis_id: selectedAnalysisId ?? undefined,
-            tailored_resume_id:
-                selectedTailoredResumeId ?? undefined,
-            cover_letter_id: selectedCoverLetterId ?? undefined,
-            })
-
-            setApplications((previous) => [
-            application,
-            ...previous,
-            ])
-            setCompany("")
-            setRole("")
-            setStatus("saved")
-            setJobUrl("")
-            setJobDescription("")
-            setAppliedAt("")
-            setNextActionDate("")
-            setNotes("")
-            setSelectedAnalysisId(null)
-            setSelectedTailoredResumeId(null)
-            setSelectedCoverLetterId(null)
-        } catch (error) {
-            setError(
-            error instanceof Error
-                ? error.message
-                : "Failed to create application."
-            )
-        } finally {
-            setCreating(false)
-        }
-    }
 
     const statusCounts = applicationStatuses.reduce(
         (counts, status) => {
@@ -277,12 +167,21 @@ export default function ApplicationsPage() {
                 </p>
             </div>
 
-            <Link
-                href="/history"
-                className="rounded-xl border border-purple-500/40 px-4 py-2 font-semibold text-purple-200 hover:bg-purple-500/10"
-            >
-                Back to history
-            </Link>
+            <div className="flex flex-wrap gap-3">
+                <Link
+                    href="/applications/new"
+                    className="rounded-xl bg-purple-600 px-4 py-2 font-semibold text-white hover:bg-purple-500"
+                >
+                    + Track application
+                </Link>
+
+                <Link
+                    href="/history"
+                    className="rounded-xl border border-purple-500/40 px-4 py-2 font-semibold text-purple-200 hover:bg-purple-500/10"
+                >
+                    Back to history
+                </Link>
+            </div>
             </div>
 
             {error && (
@@ -290,206 +189,6 @@ export default function ApplicationsPage() {
                     {error}
                 </div>
             )}
-
-            <section className="mb-10 rounded-3xl border border-purple-500/20 bg-purple-500/10 p-6">
-                <h2 className="text-2xl font-semibold text-purple-200">
-                    Track an application
-                </h2>
-
-                <p className="mt-1 text-gray-400">
-                    Save the application details you want to follow.
-                </p>
-
-                <form
-                    onSubmit={createTrackedApplication}
-                    className="mt-6 grid gap-4 md:grid-cols-2"
-                >
-                    <label className="text-sm text-gray-300">
-                    Company
-                    <input
-                        value={company}
-                        onChange={(event) => setCompany(event.target.value)}
-                        required
-                        disabled={creating}
-                        className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                        placeholder="Example Corp"
-                    />
-                    </label>
-
-                    <label className="text-sm text-gray-300">
-                    Role
-                    <input
-                        value={role}
-                        onChange={(event) => setRole(event.target.value)}
-                        required
-                        disabled={creating}
-                        className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                        placeholder="Backend Engineer"
-                    />
-                    </label>
-
-                    <label className="text-sm text-gray-300">
-                    Status
-                    <select
-                        value={status}
-                        onChange={(event) =>
-                        setStatus(
-                            event.target.value as ApplicationStatus
-                        )
-                        }
-                        disabled={creating}
-                        className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                    >
-                        {applicationStatuses.map((item) => (
-                        <option key={item} value={item}>
-                            {formatStatus(item)}
-                        </option>
-                        ))}
-                    </select>
-                    </label>
-
-                    <label className="text-sm text-gray-300">
-                    Job URL
-                    <input
-                        type="url"
-                        value={jobUrl}
-                        onChange={(event) => setJobUrl(event.target.value)}
-                        disabled={creating}
-                        className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                        placeholder="https://example.com/jobs/123"
-                    />
-                    </label>
-
-                    <label className="text-sm text-gray-300">
-                    Applied date
-                    <input
-                        type="date"
-                        value={appliedAt}
-                        onChange={(event) => setAppliedAt(event.target.value)}
-                        disabled={creating}
-                        className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                    />
-                    </label>
-
-                    <label className="text-sm text-gray-300">
-                    Next action date
-                    <input
-                        type="date"
-                        value={nextActionDate}
-                        onChange={(event) =>
-                        setNextActionDate(event.target.value)
-                        }
-                        disabled={creating}
-                        className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                    />
-                    </label>
-
-                    <label className="text-sm text-gray-300 md:col-span-2">
-                    Job description snapshot
-                    <textarea
-                        value={jobDescription}
-                        onChange={(event) =>
-                        setJobDescription(event.target.value)
-                        }
-                        disabled={creating}
-                        className="mt-2 min-h-32 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                        placeholder="Optional: paste the job description you applied to."
-                    />
-                    </label>
-
-                    <label className="text-sm text-gray-300 md:col-span-2">
-                    Notes
-                    <textarea
-                        value={notes}
-                        onChange={(event) => setNotes(event.target.value)}
-                        disabled={creating}
-                        className="mt-2 min-h-28 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                        placeholder="Optional follow-up or application notes."
-                    />
-                    </label>
-
-                    <label className="text-sm text-gray-300">
-                        Related analysis
-                        <select
-                            value={selectedAnalysisId ?? ""}
-                            onChange={(event) =>
-                                setSelectedAnalysisId(
-                                    event.target.value
-                                    ? Number(event.target.value)
-                                    : null
-                                )
-                            }
-                            disabled={creating}
-                            className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                        >
-                            <option value="">No linked analysis</option>
-                            {analyses.map((analysis) => (
-                            <option key={analysis.id} value={analysis.id}>
-                                Analysis #{analysis.id} · {analysis.match_score}% match
-                            </option>
-                            ))}
-                        </select>
-                        </label>
-
-                        <label className="text-sm text-gray-300">
-                        Tailored resume version
-                        <select
-                            value={selectedTailoredResumeId ?? ""}
-                            onChange={(event) =>
-                            setSelectedTailoredResumeId(
-                                event.target.value
-                                ? Number(event.target.value)
-                                : null
-                            )
-                            }
-                            disabled={creating}
-                            className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                        >
-                            <option value="">No linked tailored resume</option>
-                            {tailoredResumes.map((resume) => (
-                            <option key={resume.id} value={resume.id}>
-                                Resume version {resume.version_number} · Analysis #
-                                {resume.source_analysis_id}
-                            </option>
-                            ))}
-                        </select>
-                        </label>
-
-                        <label className="text-sm text-gray-300 md:col-span-2">
-                        Cover letter version
-                        <select
-                            value={selectedCoverLetterId ?? ""}
-                            onChange={(event) =>
-                            setSelectedCoverLetterId(
-                                event.target.value
-                                ? Number(event.target.value)
-                                : null
-                            )
-                            }
-                            disabled={creating}
-                            className="mt-2 w-full rounded-xl border border-purple-500/40 bg-black px-4 py-3 text-white"
-                        >
-                            <option value="">No linked cover letter</option>
-                            {coverLetters.map((coverLetter) => (
-                            <option key={coverLetter.id} value={coverLetter.id}>
-                                Cover letter version {coverLetter.version_number} ·
-                                Analysis #{coverLetter.source_analysis_id}
-                            </option>
-                            ))}
-                        </select>
-                        </label>
-
-                    <div className="md:col-span-2">
-                    <button
-                        type="submit"
-                        disabled={creating}
-                        className="rounded-xl bg-purple-600 px-5 py-3 font-semibold text-white hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {creating ? "Saving..." : "Save application"}
-                    </button>
-                    </div>
-                </form>
-                </section>
 
             <section className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <article className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-5">
@@ -542,29 +241,6 @@ export default function ApplicationsPage() {
             </section>
             ) : (
             <>
-                <section className="mb-10">
-                <h2 className="text-2xl font-semibold text-purple-200">
-                    Status overview
-                </h2>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {applicationStatuses.map((status) => (
-                    <article
-                        key={status}
-                        className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                    >
-                        <p className="text-sm text-gray-400">
-                        {formatStatus(status)}
-                        </p>
-
-                        <p className="mt-2 text-2xl font-semibold">
-                        {statusCounts[status]}
-                        </p>
-                    </article>
-                    ))}
-                </div>
-                </section>
-
                 <section>
                 <div className="mb-5">
                     <h2 className="text-2xl font-semibold text-pink-200">
