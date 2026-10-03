@@ -11,6 +11,10 @@ from app.models.tailored_resume_model import TailoredResume
 from app.models.user_model import User
 from app.models.saved_resume_model import SavedResume
 from app.models.cover_letter_model import CoverLetter
+from app.models.application_model import (
+    Application,
+    ApplicationEvent,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

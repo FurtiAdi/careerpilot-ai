@@ -48,7 +48,20 @@ export default function Navbar() {
 
   }, [])
 
-  
+  const fetchUserProfile = async () => {
+    try {
+      const userData = await getCurrentUser()
+
+      setUser(userData)
+    } catch (error) {
+      console.error(error)
+
+      localStorage.removeItem("token")
+      setIsAuthenticated(false)
+      setUser(null)
+    }
+  }
+
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem("token")
@@ -69,21 +82,6 @@ export default function Navbar() {
     setUser(null)
     setOpenDropdown(false)
     router.push("/login")
-  }
-
-  
-  const fetchUserProfile = async () => {
-    try {
-      const userData = await getCurrentUser()
-
-      setUser(userData)
-    } catch (error) {
-      console.error(error)
-
-      localStorage.removeItem("token")
-      setIsAuthenticated(false)
-      setUser(null)
-    }
   }
 
   return (
@@ -155,8 +153,20 @@ export default function Navbar() {
                 Home
               </Link>
 
-          
+
               <div className="flex items-center gap-4">
+
+                <Link
+                  href="/applications"
+                  className="
+                    px-5 py-2 rounded-xl
+                    border border-white/10
+                    hover:border-purple-500/40
+                    transition-all duration-300
+                  "
+                >
+                  Applications
+                </Link>
 
                 <Link
                   href="/history"
