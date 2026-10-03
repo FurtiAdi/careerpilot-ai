@@ -85,7 +85,10 @@ export default function Navbar() {
     router.push("/login")
   }
 
-  if (pathname === "/") {
+  const isPublicLandingPage = pathname === "/"
+  const isRegistrationPage = pathname === "/register"
+
+  if (isPublicLandingPage || isRegistrationPage) {
     return (
       <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -101,34 +104,37 @@ export default function Navbar() {
 
             <span className="text-2xl font-bold tracking-tight text-slate-900">
               CareerPilot{" "}
+
               <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
                 AI
               </span>
             </span>
           </Link>
 
-          <div className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
-            <a
-              href="#features"
-              className="transition hover:text-purple-600"
-            >
-              Features
-            </a>
+          {isPublicLandingPage && (
+            <div className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
+              <a
+                href="#features"
+                className="transition hover:text-purple-600"
+              >
+                Features
+              </a>
 
-            <a
-              href="#how-it-works"
-              className="transition hover:text-purple-600"
-            >
-              How it works
-            </a>
+              <a
+                href="#how-it-works"
+                className="transition hover:text-purple-600"
+              >
+                How it works
+              </a>
 
-            <a
-              href="#about"
-              className="transition hover:text-purple-600"
-            >
-              About
-            </a>
-          </div>
+              <a
+                href="#about"
+                className="transition hover:text-purple-600"
+              >
+                About
+              </a>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <Link
@@ -138,17 +144,20 @@ export default function Navbar() {
               Log in
             </Link>
 
-            <Link
-              href="/register"
-              className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-            >
-              Get started
-            </Link>
+            {isPublicLandingPage && (
+              <Link
+                href="/register"
+                className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+              >
+                Get started
+              </Link>
+            )}
           </div>
         </div>
       </nav>
     )
   }
+
   return (
 
     <nav

@@ -6,6 +6,40 @@ from app.models.saved_resume_model import SavedResume
 from app.models.user_model import User
 from app.services import user_service
 
+def test_register_user_creates_account_without_uploads(
+    monkeypatch,
+):
+    db = MagicMock()
+    db.query.return_value.filter.return_value.first.return_value = (
+        None
+    )
+
+    monkeypatch.setattr(
+        user_service,
+        "hash_password",
+        MagicMock(return_value="hashed-password"),
+    )
+
+    result = user_service.register_user(
+        full_name="Ada Lovelace",
+        email="ada@example.com",
+        password="secure-password",
+        resume_content=None,
+        resume_original_filename=None,
+        profile_picture_content=None,
+        profile_picture_content_type=None,
+        db=db,
+    )
+
+    assert isinstance(result, User)
+    assert result.full_name == "Ada Lovelace"
+    assert result.email == "ada@example.com"
+    assert result.resume_filename is None
+    assert result.profile_picture_filename is None
+
+    db.add.assert_called_once_with(result)
+    db.flush.assert_called_once()
+    db.commit.assert_called_once()
 
 def test_register_user_creates_saved_resume_for_uploaded_pdf(
     tmp_path,

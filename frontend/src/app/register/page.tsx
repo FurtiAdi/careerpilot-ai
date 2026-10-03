@@ -1,45 +1,43 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { register } from "@/services/authService"
+import { useRouter } from "next/navigation"
+import { type FormEvent, useState } from "react"
 import {
-  User,
-  Mail,
+  ArrowRight,
   Lock,
-  FileText
+  Mail,
+  User,
 } from "lucide-react"
 
-export default function RegisterPage() {
+import { register } from "@/services/authService"
 
+export default function RegisterPage() {
   const router = useRouter()
 
-  const [fullName, setFullName] =
-    useState("")
+  const [fullName, setFullName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const [email, setEmail] =
-    useState("")
+  const registerUser = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault()
 
-  const [password, setPassword] =
-    useState("")
-
-  const [profileImage, setProfileImage] =
-    useState<File | null>(null)
-
-  const [resumeFile, setResumeFile] =
-    useState<File | null>(null)
-
-  const [loading, setLoading] =
-    useState(false)
-
-  const registerUser = async () => {
     if (
-      !fullName ||
-      !email ||
-      !password
+      !fullName.trim() ||
+      !email.trim() ||
+      !password ||
+      !confirmPassword
     ) {
-      alert("Please fill all fields")
+      alert("Please fill in all fields.")
+      return
+    }
+
+    if (password !== confirmPassword) {
+      alert("Passwords do not match.")
       return
     }
 
@@ -47,14 +45,12 @@ export default function RegisterPage() {
       setLoading(true)
 
       await register({
-        fullName,
-        email,
+        fullName: fullName.trim(),
+        email: email.trim(),
         password,
-        resumeFile,
-        profileImage,
       })
 
-      alert("Account created successfully!")
+      alert("Account created successfully. Please log in.")
 
       router.push("/login")
     } catch (error) {
@@ -69,353 +65,145 @@ export default function RegisterPage() {
   }
 
   return (
+    <main className="min-h-screen bg-slate-50 px-6 pb-12 pt-28 text-slate-900">
+      <div className="pointer-events-none absolute left-0 top-20 h-72 w-72 rounded-full bg-purple-200/50 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-pink-100/70 blur-3xl" />
 
-    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6 py-20 overflow-x-hidden">
-
-      {/* Purple Glow */}
-      <div className="absolute top-40 left-10 w-72 h-72 bg-purple-600/20 blur-[120px] rounded-full" />
-
-      {/* Pink Glow */}
-      <div className="absolute bottom-20 right-10 w-72 h-72 bg-pink-600/20 blur-[120px] rounded-full" />
-
-      <div
-        className="
-          relative z-10
-          w-full max-w-lg
-          bg-white/5
-          border border-white/10
-          rounded-3xl
-          p-8
-          backdrop-blur-xl
-        "
-      >
-
-        {/* Heading */}
-        <h1
-          className="
-            text-3xl font-bold text-center mb-4
-            bg-gradient-to-r
-            from-purple-400
-            to-pink-500
-            text-transparent bg-clip-text
-          "
-        >
-          Create Profile
-        </h1>
-
-        <p className="text-center text-gray-400 mb-5">
-            Start your AI-powered career journey
-        </p>
-
-        {/* Profile Picture Upload */}
-        <div className="flex flex-col items-center mb-5">
-
-        <label className="relative cursor-pointer group">
-
-            {/* Avatar Circle */}
-            <div
-            className="
-                w-24 h-24 rounded-full
-                bg-gradient-to-br
-                from-white/10
-                to-white/5
-                border border-white/10
-                overflow-hidden
-                flex items-center justify-center
-                transition-all duration-300
-                group-hover:scale-105
-                group-hover:border-purple-400
-            "
-            >
-
-            {profileImage ? (
-
-                <img
-                src={URL.createObjectURL(profileImage)}
-                alt="Profile"
-                className="w-full h-full object-cover"
-                />
-
-            ) : (
-
-                <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-16 h-16 text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                >
-
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.933 17.933 0 0112 21.75a17.933 17.933 0 01-7.5-1.632z"
-                />
-
-                </svg>
-
-            )}
-
+      <section className="relative mx-auto flex min-h-[calc(100vh-10rem)] max-w-md items-center">
+        <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-purple-950/10 sm:p-10">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 text-white shadow-lg shadow-purple-500/30">
+              <User className="h-6 w-6" />
             </div>
 
-            {/* Plus Icon */}
-            <div
-            className="
-                absolute bottom-1 right-1
-                w-8 h-8 rounded-full
-                bg-gradient-to-r
-                from-purple-500
-                to-pink-500
-                flex items-center justify-center
-                shadow-lg shadow-pink-500/30
-                border-4 border-black
-            "
-            >
+            <p className="mb-2 text-sm font-semibold text-purple-600">
+              CareerPilot AI
+            </p>
 
-            <span className="text-white text-2xl leading-none">
-                +
-            </span>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+              Create your account
+            </h1>
 
-            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Start your focused job-search journey with CareerPilot.
+            </p>
+          </div>
 
-            {/* Hidden Input */}
-            <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) =>
-                setProfileImage(
-                e.target.files?.[0] || null
-                )
-            }
-            />
+          <form
+            onSubmit={registerUser}
+            className="space-y-5"
+          >
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-800">
+                Full name
+              </span>
 
-        </label>
-
-        </div>
-
-        {/* Full Name */}
-        <div className="mb-5">
-
-            <label className="block mb-2 text-gray-300">
-                Full Name
-            </label>
-
-            <div className="relative">
+              <div className="relative">
+                <User className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
 
                 <input
-                type="text"
-                placeholder="Your name"
-                value={fullName}
-                onChange={(e) =>
-                    setFullName(e.target.value)
-                }
-                className="
-                    w-full h-14
-                    bg-black/40
-                    border border-white/10
-                    rounded-2xl
-                    px-5 pr-14
-                    text-white
-                    placeholder:text-gray-500
-                    focus:outline-none
-                    focus:border-purple-500
-                "
+                  type="text"
+                  value={fullName}
+                  onChange={(event) =>
+                    setFullName(event.target.value)
+                  }
+                  placeholder="Alex Johnson"
+                  autoComplete="name"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
                 />
+              </div>
+            </label>
 
-                <User
-                className="
-                    absolute right-5 top-1/2
-                    -translate-y-1/2
-                    text-gray-500
-                    w-5 h-5
-                "
-                />
-
-            </div>
-        </div>
-
-        {/* Email */}
-        <div className="mb-5">
-
-            <label className="block mb-2 text-gray-300">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-800">
                 Email
-            </label>
+              </span>
 
-            <div className="relative">
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
 
                 <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) =>
-                    setEmail(e.target.value)
-                }
-                className="
-                    w-full h-14
-                    bg-black/40
-                    border border-white/10
-                    rounded-2xl
-                    px-5 pr-14
-                    text-white
-                    placeholder:text-gray-500
-                    focus:outline-none
-                    focus:border-purple-500
-                "
+                  type="email"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                  placeholder="name@example.com"
+                  autoComplete="email"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
                 />
+              </div>
+            </label>
 
-                <Mail
-                className="
-                    absolute right-5 top-1/2
-                    -translate-y-1/2
-                    text-gray-500
-                    w-5 h-5
-                "
-                />
-
-            </div>
-
-        </div>
-
-        {/* Password */}
-        <div className="mb-5">
-
-            <label className="block mb-2 text-gray-300">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-800">
                 Password
-            </label>
+              </span>
 
-            <div className="relative">
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
 
                 <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) =>
-                    setPassword(e.target.value)
-                }
-                className="
-                    w-full h-14
-                    bg-black/40
-                    border border-white/10
-                    rounded-2xl
-                    px-5 pr-14
-                    text-white
-                    placeholder:text-gray-500
-                    focus:outline-none
-                    focus:border-purple-500
-                "
+                  type="password"
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  placeholder="Create a password"
+                  autoComplete="new-password"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
                 />
+              </div>
+            </label>
 
-                <Lock
-                className="
-                    absolute right-5 top-1/2
-                    -translate-y-1/2
-                    text-gray-500
-                    w-5 h-5
-                "
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-800">
+                Confirm password
+              </span>
+
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) =>
+                    setConfirmPassword(event.target.value)
+                  }
+                  placeholder="Repeat your password"
+                  autoComplete="new-password"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
                 />
+              </div>
+            </label>
 
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 font-semibold text-white shadow-lg shadow-purple-500/25 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
+                ? "Creating account..."
+                : "Create account"}
 
-        </div>
-
-        {/* CV Upload */}
-        <div className="mb-5">
-
-          <label className="block mb-2 text-gray-300">
-            Upload CV (Optional)
-          </label>
-
-          <label
-            className="
-              flex items-center justify-center
-              w-full h-16
-              rounded-2xl
-              border border-dashed border-pink-500/30
-              bg-black/40
-              cursor-pointer
-              hover:border-pink-400
-              transition-all duration-300
-            "
-          >
-
-            <div className="text-center">
-
-              <div className="flex items-center gap-3 text-white">
-
-                    <FileText className="w-5 h-5 text-pink-400" />
-
-                    <p>
-                        Upload Resume
-                    </p>
-
-                </div>
-
-                {resumeFile && (
-                    <p className="text-sm text-pink-300 mt-2">
-                    {resumeFile.name}
-                    </p>
+              {!loading && (
+                <ArrowRight className="h-5 w-5" />
               )}
+            </button>
+          </form>
 
-            </div>
+          <p className="mt-7 text-center text-sm text-slate-600">
+            Already have an account?{" "}
 
-            <input
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={(e) =>
-                setResumeFile(
-                  e.target.files?.[0] || null
-                )
-              }
-            />
-
-          </label>
-
+            <Link
+              href="/login"
+              className="font-semibold text-purple-700 transition hover:text-pink-600"
+            >
+              Log in
+            </Link>
+          </p>
         </div>
-
-        {/* Register Button */}
-        <button
-          onClick={registerUser}
-          disabled={loading}
-          className="
-            w-full h-14 rounded-2xl
-            bg-gradient-to-r
-            from-purple-600
-            to-pink-500
-            font-semibold text-lg
-            hover:opacity-90
-            transition-all duration-300
-          "
-        >
-
-          {loading
-            ? "Creating Profile..."
-            : "Create Account"
-          }
-
-        </button>
-
-        {/* Login Link */}
-        <p className="text-center text-gray-400 mt-8">
-
-          Already have an account?
-
-          <Link
-            href="/login"
-            className="
-              ml-2 text-purple-400
-              hover:text-pink-400
-            "
-          >
-            Sign In
-          </Link>
-
-        </p>
-
-      </div>
-
+      </section>
     </main>
   )
 }
