@@ -1,0 +1,450 @@
+"use client"
+
+import { useState, useRef } from "react"
+import {
+  analyzeJobRequest,
+  uploadResumeFile,
+  AnalyzeJobResponse,
+} from "@/services/analysisService"
+import ResumeUpload from "@/components/ResumeUpload"
+import MatchScoreCard from "@/components/analysis/MatchScoreCard"
+import SkillMatchSection from "@/components/analysis/SkillMatchSection"
+import AIFeedbackSection from "@/components/analysis/AIFeedbackSection"
+
+
+export default function ManualJobAnalyzer() {
+
+  // =========================
+  // STATE VARIABLES
+  // =========================
+
+  // Stores job description text
+  const [jobDescription, setJobDescription] = useState("")
+
+  // Stores candidate skills input
+  const [candidateSkills, setCandidateSkills] = useState("")
+
+  // Controls loading spinner/button state
+  const [loading, setLoading] = useState(false)
+
+  // Stores analysis results returned from backend
+  const [results, setResults] =
+    useState<AnalyzeJobResponse | null>(null)
+
+  const [error, setError] = 
+    useState<string | null>(null)
+
+  // Reference used for auto-scrolling to results section
+  const resultsRef = useRef<HTMLDivElement | null>(null)
+
+  // Stores uploaded resume file
+ const [resumeFile, setResumeFile] = useState<File | null>(null)
+
+
+  // =========================
+  // ANALYZE JOB FUNCTION
+  // =========================
+
+  const analyzeJob = async () => {
+
+    // Validation
+    if (!jobDescription.trim()) {
+      alert("Please enter a job description.")
+      return
+    }
+
+    if (!candidateSkills.trim()) {
+      alert("Please enter your skills.")
+      return
+    }
+
+    if (!resumeFile) {
+      alert("Please upload your resume.")
+      return
+    }
+
+    try {
+      setError(null)
+
+      // Enable loading state      
+      setLoading(true)
+
+      // Convert comma-separated skills into array
+      const skillsArray = candidateSkills
+        .split(",")
+        .map((skill) => skill.trim())
+
+      // Send POST request to backend
+      const data = await analyzeJobRequest({
+        job_description: jobDescription,
+        candidate_skills: skillsArray
+      })
+
+      // Debugging log
+      console.log(data)
+
+      // Save results into state
+      setResults(data)
+
+      // Smooth scroll to results section
+      setTimeout(() => {
+
+        resultsRef.current?.scrollIntoView({
+          behavior: "smooth"
+        })
+
+      }, 200)
+
+    } catch (error) {
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to analyze the job."
+      )
+
+    } finally {
+
+      // Disable loading state
+      setLoading(false)
+
+    }
+  }
+
+
+  // =========================
+  // RESUME UPLOAD FUNCTION
+  // =========================
+
+  const uploadResume = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+
+    // Get uploaded file
+    const file = event.target.files?.[0]
+
+    // Stop if no file selected
+    if (!file) return
+
+    // Save uploaded file
+    setResumeFile(file)
+
+    try {
+
+      setError(null)
+      const data = await uploadResumeFile(file)
+
+      // Automatically fill candidate skills
+      setCandidateSkills(
+        data.detected_skills.join(", ")
+      )
+
+    } catch (error) {
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload the resume."
+      )
+    }
+  }
+
+
+  // =========================
+  // UI / JSX
+  // =========================
+
+  return (
+
+    <main className="min-h-screen pt-20 bg-black text-white overflow-hidden">
+
+      {/* Purple glow background */}
+      <div className="absolute top-40 left-10 w-72 h-72 bg-purple-600/20 blur-[120px] rounded-full" />
+
+      {/* Pink glow background */}
+      <div className="absolute top-96 right-10 w-72 h-72 bg-pink-600/20 blur-[120px] rounded-full" />
+      
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#120018] via-black to-black" />
+      
+      {/* Main page container */}
+      <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
+
+
+        {/* =========================
+            HERO SECTION
+        ========================= */}
+
+        <div className="text-center mb-16">
+
+          {/* Small badge */}
+          <div className="inline-block px-4 py-2 rounded-full border border-purple-500/30 bg-purple-500/10 text-sm text-purple-300 mb-6">
+            AI-Powered Career Assistant
+          </div>
+
+          {/* Main heading */}
+          <h1
+            className="
+              text-5xl font-bold
+              leading-[1.1]
+              mb-6
+              max-w-5xl
+              mx-auto
+            "
+          >
+
+            Analyze Job Descriptions.
+            <br />
+
+            <span className="bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">
+              Boost Your Career.
+            </span>
+
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-gray-400 text-xl max-w-3xl mx-auto">
+            Get AI-powered insights on your resume match,
+            missing skills, and personalized improvement tips.
+          </p>
+
+        </div>
+
+
+        {/* =========================
+            FEATURE CARDS
+        ========================= */}
+
+        <div className="grid md:grid-cols-3 gap-6 mb-14">
+
+          {/* Match Score Card */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+
+            <h3 className="text-xl font-semibold mb-2">
+              Smart Match Score
+            </h3>
+
+            <p className="text-gray-400">
+              See how well your skills match the job.
+            </p>
+
+          </div>
+
+          {/* Missing Skills Card */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+
+            <h3 className="text-xl font-semibold mb-2">
+              Missing Skills
+            </h3>
+
+            <p className="text-gray-400">
+              Identify skill gaps instantly.
+            </p>
+
+          </div>
+
+          {/* AI Suggestions Card */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+
+            <h3 className="text-xl font-semibold mb-2">
+              AI Suggestions
+            </h3>
+
+            <p className="text-gray-400">
+              Improve your resume with AI insights.
+            </p>
+
+          </div>
+
+        </div>
+
+        {error && (
+          <div
+            className="
+              mb-6
+              rounded-2xl
+              border border-red-500/30
+              bg-red-500/10
+              px-5 py-4
+              text-red-200
+            "
+          >
+            {error}
+          </div>
+        )}
+
+        {/* =========================
+            FORM SECTION
+        ========================= */}
+
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
+
+          <h2 className="text-2xl font-semibold mb-6">
+            Upload Resume
+          </h2>
+          {/* Resume Upload */}
+          <ResumeUpload
+            resumeFile={resumeFile}
+            onUpload={uploadResume}
+          />
+
+
+          {/* Job Description */}
+          <label className="block text-lg font-semibold mb-3 text-gray-100">
+            Job Description
+          </label>
+
+          <textarea
+            value={jobDescription}
+            onChange={(event) =>
+              setJobDescription(event.target.value)
+            }
+            className="
+              w-full h-44 bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder:text-gray-500
+              focus:outline-none 
+              focus:border-purple-500
+              focus:ring-2
+              focus:ring-purple-500/20 mb-8
+            "
+            placeholder="Paste job description here..."
+          />
+
+
+          {/* Candidate Skills */}
+          <label className="block text-lg font-semibold mb-3 text-gray-100">
+            Candidate Skills
+          </label>
+
+          <input
+            type="text"
+            value={candidateSkills}
+            onChange={(event) =>
+              setCandidateSkills(event.target.value)
+            }
+            className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 mb-8"
+            placeholder="Example: Python, React, SQL, AWS"
+          />
+
+
+          {/* Analyze Button */}
+          <button
+            onClick={analyzeJob}
+            disabled={loading}
+            className={`
+              w-full p-5 rounded-2xl font-semibold text-lg
+              bg-gradient-to-r 
+              from-purple-600 
+              to-pink-500
+              flex items-center 
+              justify-center gap-3
+              shadow-lg shadow-pink-500/20
+              transition-all duration-300
+              ${loading
+                ? "opacity-70 cursor-not-allowed"
+                : `
+                  hover:opacity-95
+                  hover:scale-[1.01]
+                  hover:shadow-pink-500/40
+                  active:scale-[0.99]
+                `
+              }
+            `}
+          >
+            {/* Loading State */}
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+
+                <span>Analyzing...</span>
+              </>
+            ) : (
+              "Analyze Job Match"
+            )}
+
+          </button>
+
+        </div>
+
+
+        {/* =========================
+            RESULTS SECTION
+        ========================= */}
+
+        {results && (
+
+          <div
+            ref={resultsRef}
+            className="mt-10 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md"
+          >
+
+            {/* Results Heading */}
+            <h2 className="text-3xl font-bold mb-8">
+              Analysis Results
+            </h2>
+
+
+            {/* =========================
+                TOP RESULT CARDS
+            ========================= */}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 gap-6 mb-8">
+
+
+              {/* Match Score Card */}
+              <MatchScoreCard
+                score={results.match_analysis.match_score}
+              />
+
+            </div>
+
+            {/* =========================
+                SKILL MATCHING
+            ========================= */}
+
+            <SkillMatchSection
+              matchedRequired={
+                results.match_analysis.matched_required_skills
+              }
+              missingRequired={
+                results.match_analysis.missing_required_skills
+              }
+              matchedPreferred={
+                results.match_analysis.matched_preferred_skills
+              }
+              missingPreferred={
+                results.match_analysis.missing_preferred_skills
+              }
+            />
+
+
+            {/* =========================
+                AI ANALYSIS SECTION
+            ========================= */}
+
+            <div className="bg-gradient-to-br from-purple-500/3 to-pink-500/3 border border-white/10 rounded-2xl p-8">
+
+              {/* AI Analysis Heading */}
+              <h3 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-300 to-pink-400 text-transparent bg-clip-text">
+                AI Analysis
+              </h3>
+
+              {/* AI Badge */}
+              <div className="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm">
+                AI Generated Insights
+              </div>
+
+              {/* AI Generated Text */}
+              <AIFeedbackSection
+                analysis={results.ai_analysis}
+              />
+
+            </div>
+
+          </div>
+
+        )}
+
+      </div>
+    </main>
+  )
+}

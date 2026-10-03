@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { Sparkles } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { getCurrentUser, User } from "@/services/userService"
 
 
@@ -11,6 +11,7 @@ export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
   const [openDropdown, setOpenDropdown] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
   const dropdownRef = useRef<HTMLDivElement | null >(null)
 
   useEffect(() => {
@@ -84,6 +85,70 @@ export default function Navbar() {
     router.push("/login")
   }
 
+  if (pathname === "/") {
+    return (
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2"
+            aria-label="CareerPilot AI home"
+          >
+            <Sparkles
+              className="h-7 w-7 text-purple-600"
+              strokeWidth={2.4}
+            />
+
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
+              CareerPilot{" "}
+              <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+                AI
+              </span>
+            </span>
+          </Link>
+
+          <div className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
+            <a
+              href="#features"
+              className="transition hover:text-purple-600"
+            >
+              Features
+            </a>
+
+            <a
+              href="#how-it-works"
+              className="transition hover:text-purple-600"
+            >
+              How it works
+            </a>
+
+            <a
+              href="#about"
+              className="transition hover:text-purple-600"
+            >
+              About
+            </a>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-purple-300 hover:bg-purple-50"
+            >
+              Log in
+            </Link>
+
+            <Link
+              href="/register"
+              className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+            >
+              Get started
+            </Link>
+          </div>
+        </div>
+      </nav>
+    )
+  }
   return (
 
     <nav

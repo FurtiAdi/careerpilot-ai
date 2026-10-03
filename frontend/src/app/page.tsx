@@ -1,457 +1,466 @@
-"use client"
-
-import { useState, useRef } from "react"
+import Link from "next/link"
 import {
-  analyzeJobRequest,
-  uploadResumeFile,
-  AnalyzeJobResponse,
-} from "@/services/analysisService"
-import ResumeUpload from "@/components/ResumeUpload"
-import MatchScoreCard from "@/components/analysis/MatchScoreCard"
-import SkillMatchSection from "@/components/analysis/SkillMatchSection"
-import AIFeedbackSection from "@/components/analysis/AIFeedbackSection"
+  BriefcaseBusiness,
+  CalendarCheck2,
+  CheckCircle2,
+  Code2,
+  FilePenLine,
+  FileText,
+  Heart,
+  MapPin,
+  MessageSquareText,
+} from "lucide-react"
 
+const demoJobs = [
+  {
+    title: "Backend Developer",
+    company: "Tech Company AB",
+    location: "Stockholm · Full-time",
+    match: "92% match",
+    icon: Code2,
+    iconClassName: "bg-blue-500",
+    matchClassName: "bg-emerald-100 text-emerald-700",
+  },
+  {
+    title: "Administrator",
+    company: "Kommunen",
+    location: "Sigtuna · Full-time",
+    match: "78% match",
+    icon: FileText,
+    iconClassName: "bg-amber-400",
+    matchClassName: "bg-amber-100 text-amber-700",
+  },
+  {
+    title: "Vårdbiträde",
+    company: "Omsorgsbolaget",
+    location: "Stockholm · Part-time",
+    match: "71% match",
+    icon: Heart,
+    iconClassName: "bg-purple-600",
+    matchClassName: "bg-amber-100 text-amber-700",
+  },
+]
+
+const matchBreakdown = [
+  ["Overall match", "92%", "w-full"],
+  ["Skills match", "90%", "w-[90%]"],
+  ["Experience match", "80%", "w-[80%]"],
+  ["Education match", "100%", "w-full"],
+  ["Role relevance", "90%", "w-[90%]"],
+  ["Location & preferences", "95%", "w-[95%]"],
+  ["Language match", "100%", "w-full"],
+]
+
+const featureCards = [
+  {
+    title: "Smart Job Matching",
+    description:
+      "Find opportunities that align with your skills, experience, and career goals.",
+    icon: BriefcaseBusiness,
+    iconClassName: "bg-purple-100 text-purple-600",
+  },
+  {
+    title: "Tailored CV & Cover Letter",
+    description:
+      "Create focused application documents for each opportunity you pursue.",
+    icon: FilePenLine,
+    iconClassName: "bg-pink-100 text-pink-600",
+  },
+  {
+    title: "Application Tracker",
+    description:
+      "Keep track of your applications, follow-ups, documents, and progress.",
+    icon: CalendarCheck2,
+    iconClassName: "bg-violet-100 text-violet-600",
+  },
+  {
+    title: "Interview Preparation",
+    description:
+      "Prepare with personalized questions, guidance, and practical interview tips.",
+    icon: MessageSquareText,
+    iconClassName: "bg-rose-100 text-rose-600",
+  },
+]
+
+const journeySteps = [
+  {
+    number: "01",
+    title: "Upload your CV",
+    description:
+      "Share your experience so CareerPilot can understand your professional background.",
+  },
+  {
+    number: "02",
+    title: "Discover jobs",
+    description:
+      "Explore opportunities selected to match your skills and career direction.",
+  },
+  {
+    number: "03",
+    title: "Get insights",
+    description:
+      "See how each role aligns with your strengths and where you can improve.",
+  },
+  {
+    number: "04",
+    title: "Apply with confidence",
+    description:
+      "Prepare your application, track progress, and stay ready for next steps.",
+  },
+]
 
 export default function Home() {
-
-  // =========================
-  // STATE VARIABLES
-  // =========================
-
-  // Stores job description text
-  const [jobDescription, setJobDescription] = useState("")
-
-  // Stores candidate skills input
-  const [candidateSkills, setCandidateSkills] = useState("")
-
-  // Controls loading spinner/button state
-  const [loading, setLoading] = useState(false)
-
-  // Stores analysis results returned from backend
-  const [results, setResults] =
-    useState<AnalyzeJobResponse | null>(null)
-
-  const [error, setError] = 
-    useState<string | null>(null)
-
-  // Reference used for auto-scrolling to results section
-  const resultsRef = useRef<HTMLDivElement | null>(null)
-
-  // Stores uploaded resume file
-  const [resumeFile, setResumeFile] = useState<File | null>(null)
-
-  // Stores extracted resume text
-  const [resumeText, setResumeText] = useState("")
-  
-
-
-  // =========================
-  // ANALYZE JOB FUNCTION
-  // =========================
-
-  const analyzeJob = async () => {
-
-    // Validation
-    if (!jobDescription.trim()) {
-      alert("Please enter a job description.")
-      return
-    }
-
-    if (!candidateSkills.trim()) {
-      alert("Please enter your skills.")
-      return
-    }
-
-    if (!resumeFile) {
-      alert("Please upload your resume.")
-      return
-    }
-
-    try {
-      setError(null)
-
-      // Enable loading state      
-      setLoading(true)
-
-      // Convert comma-separated skills into array
-      const skillsArray = candidateSkills
-        .split(",")
-        .map((skill) => skill.trim())
-
-      // Send POST request to backend
-      const data = await analyzeJobRequest({
-        job_description: jobDescription,
-        candidate_skills: skillsArray
-      })
-
-      // Debugging log
-      console.log(data)
-
-      // Save results into state
-      setResults(data)
-
-      // Smooth scroll to results section
-      setTimeout(() => {
-
-        resultsRef.current?.scrollIntoView({
-          behavior: "smooth"
-        })
-
-      }, 200)
-
-    } catch (error) {
-
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to analyze the job."
-      )
-
-    } finally {
-
-      // Disable loading state
-      setLoading(false)
-
-    }
-  }
-
-
-  // =========================
-  // RESUME UPLOAD FUNCTION
-  // =========================
-
-  const uploadResume = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-
-    // Get uploaded file
-    const file = event.target.files?.[0]
-
-    // Stop if no file selected
-    if (!file) return
-
-    // Save uploaded file
-    setResumeFile(file)
-
-    try {
-
-      setError(null)
-      const data = await uploadResumeFile(file)
-
-      // Save extracted resume text
-      setResumeText(data.extracted_text)
-
-      // Automatically fill candidate skills
-      setCandidateSkills(
-        data.detected_skills.join(", ")
-      )
-
-    } catch (error) {
-
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to upload the resume."
-      )
-    }
-  }
-
-
-  // =========================
-  // UI / JSX
-  // =========================
-
   return (
+    <main className="min-h-screen overflow-hidden bg-slate-50 pt-24 text-slate-900">
+      <section className="relative">
+        <div className="absolute inset-x-0 top-0 h-[34rem] bg-gradient-to-br from-white via-purple-50 to-pink-50" />
 
-    <main className="min-h-screen pt-20 bg-black text-white overflow-hidden">
-
-      {/* Purple glow background */}
-      <div className="absolute top-40 left-10 w-72 h-72 bg-purple-600/20 blur-[120px] rounded-full" />
-
-      {/* Pink glow background */}
-      <div className="absolute top-96 right-10 w-72 h-72 bg-pink-600/20 blur-[120px] rounded-full" />
-      
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#120018] via-black to-black" />
-      
-      {/* Main page container */}
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
-
-
-        {/* =========================
-            HERO SECTION
-        ========================= */}
-
-        <div className="text-center mb-16">
-
-          {/* Small badge */}
-          <div className="inline-block px-4 py-2 rounded-full border border-purple-500/30 bg-purple-500/10 text-sm text-purple-300 mb-6">
-            AI-Powered Career Assistant
-          </div>
-
-          {/* Main heading */}
-          <h1
-            className="
-              text-5xl font-bold
-              leading-[1.1]
-              mb-6
-              max-w-5xl
-              mx-auto
-            "
-          >
-
-            Analyze Job Descriptions.
-            <br />
-
-            <span className="bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">
-              Boost Your Career.
-            </span>
-
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-gray-400 text-xl max-w-3xl mx-auto">
-            Get AI-powered insights on your resume match,
-            missing skills, and personalized improvement tips.
-          </p>
-
-        </div>
-
-
-        {/* =========================
-            FEATURE CARDS
-        ========================= */}
-
-        <div className="grid md:grid-cols-3 gap-6 mb-14">
-
-          {/* Match Score Card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-
-            <h3 className="text-xl font-semibold mb-2">
-              Smart Match Score
-            </h3>
-
-            <p className="text-gray-400">
-              See how well your skills match the job.
-            </p>
-
-          </div>
-
-          {/* Missing Skills Card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-
-            <h3 className="text-xl font-semibold mb-2">
-              Missing Skills
-            </h3>
-
-            <p className="text-gray-400">
-              Identify skill gaps instantly.
-            </p>
-
-          </div>
-
-          {/* AI Suggestions Card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-
-            <h3 className="text-xl font-semibold mb-2">
-              AI Suggestions
-            </h3>
-
-            <p className="text-gray-400">
-              Improve your resume with AI insights.
-            </p>
-
-          </div>
-
-        </div>
-
-        {error && (
-          <div
-            className="
-              mb-6
-              rounded-2xl
-              border border-red-500/30
-              bg-red-500/10
-              px-5 py-4
-              text-red-200
-            "
-          >
-            {error}
-          </div>
-        )}
-
-        {/* =========================
-            FORM SECTION
-        ========================= */}
-
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
-
-          <h2 className="text-2xl font-semibold mb-6">
-            Upload Resume
-          </h2>
-          {/* Resume Upload */}
-          <ResumeUpload
-            resumeFile={resumeFile}
-            onUpload={uploadResume}
-          />
-
-
-          {/* Job Description */}
-          <label className="block text-lg font-semibold mb-3 text-gray-100">
-            Job Description
-          </label>
-
-          <textarea
-            value={jobDescription}
-            onChange={(event) =>
-              setJobDescription(event.target.value)
-            }
-            className="
-              w-full h-44 bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder:text-gray-500
-              focus:outline-none 
-              focus:border-purple-500
-              focus:ring-2
-              focus:ring-purple-500/20 mb-8
-            "
-            placeholder="Paste job description here..."
-          />
-
-
-          {/* Candidate Skills */}
-          <label className="block text-lg font-semibold mb-3 text-gray-100">
-            Candidate Skills
-          </label>
-
-          <input
-            type="text"
-            value={candidateSkills}
-            onChange={(event) =>
-              setCandidateSkills(event.target.value)
-            }
-            className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 mb-8"
-            placeholder="Example: Python, React, SQL, AWS"
-          />
-
-
-          {/* Analyze Button */}
-          <button
-            onClick={analyzeJob}
-            disabled={loading}
-            className={`
-              w-full p-5 rounded-2xl font-semibold text-lg
-              bg-gradient-to-r 
-              from-purple-600 
-              to-pink-500
-              flex items-center 
-              justify-center gap-3
-              shadow-lg shadow-pink-500/20
-              transition-all duration-300
-              ${loading
-                ? "opacity-70 cursor-not-allowed"
-                : `
-                  hover:opacity-95
-                  hover:scale-[1.01]
-                  hover:shadow-pink-500/40
-                  active:scale-[0.99]
-                `
-              }
-            `}
-          >
-            {/* Loading State */}
-            {loading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              "Analyze Job Match"
-            )}
-
-          </button>
-
-        </div>
-
-
-        {/* =========================
-            RESULTS SECTION
-        ========================= */}
-
-        {results && (
-
-          <div
-            ref={resultsRef}
-            className="mt-10 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md"
-          >
-
-            {/* Results Heading */}
-            <h2 className="text-3xl font-bold mb-8">
-              Analysis Results
-            </h2>
-
-
-            {/* =========================
-                TOP RESULT CARDS
-            ========================= */}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 gap-6 mb-8">
-
-
-              {/* Match Score Card */}
-              <MatchScoreCard
-                score={results.match_analysis.match_score}
-              />
-
+        <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-6 py-16 lg:grid-cols-[0.95fr_1.05fr] lg:py-24">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-4 py-2 text-sm font-semibold text-purple-800">
+              <SparklesIcon />
+              AI-Powered Career Assistant
             </div>
 
-            {/* =========================
-                SKILL MATCHING
-            ========================= */}
+            <h1 className="mt-8 max-w-2xl text-5xl font-bold leading-[1.04] tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
+              Find the right jobs
+              <br />
+              for{" "}
+              <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+                your future.
+              </span>
+            </h1>
 
-            <SkillMatchSection
-              matchedRequired={
-                results.match_analysis.matched_required_skills
-              }
-              missingRequired={
-                results.match_analysis.missing_required_skills
-              }
-              matchedPreferred={
-                results.match_analysis.matched_preferred_skills
-              }
-              missingPreferred={
-                results.match_analysis.missing_preferred_skills
-              }
-            />
+            <p className="mt-7 max-w-xl text-xl leading-8 text-slate-500">
+              CareerPilot helps you discover opportunities that match
+              your skills, experience, and career goals—then prepares
+              you to apply with confidence.
+            </p>
 
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                href="/register"
+                className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-6 py-3.5 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:scale-[1.02] hover:opacity-90"
+              >
+                Get started →
+              </Link>
 
-            {/* =========================
-                AI ANALYSIS SECTION
-            ========================= */}
+              <a
+                href="#how-it-works"
+                className="rounded-xl border border-slate-200 bg-white px-6 py-3.5 font-semibold text-slate-900 shadow-sm transition hover:border-purple-300 hover:bg-purple-50"
+              >
+                See how it works
+              </a>
+            </div>
 
-            <div className="bg-gradient-to-br from-purple-500/3 to-pink-500/3 border border-white/10 rounded-2xl p-8">
+            <ul className="mt-9 flex flex-wrap gap-x-7 gap-y-3 text-sm text-slate-500">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                Find relevant jobs
+              </li>
 
-              {/* AI Analysis Heading */}
-              <h3 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-300 to-pink-400 text-transparent bg-clip-text">
-                AI Analysis
-              </h3>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                Tailor your applications
+              </li>
 
-              {/* AI Badge */}
-              <div className="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm">
-                AI Generated Insights
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                Track your progress
+              </li>
+            </ul>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-2xl">
+            <div className="absolute -inset-10 rounded-[4rem] bg-gradient-to-br from-purple-200/70 via-fuchsia-100 to-pink-200/70 blur-2xl" />
+
+            <div className="relative rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl shadow-purple-950/10">
+              <div className="flex items-center gap-2 border-b border-slate-100 px-2 pb-4">
+                <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-400" />
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
               </div>
 
-              {/* AI Generated Text */}
-              <AIFeedbackSection
-                analysis={results.ai_analysis}
-              />
+              <div className="rounded-2xl bg-slate-50 p-5 sm:p-6">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Recommended for you
+                  </h2>
 
+                  <span className="text-sm font-medium text-purple-700">
+                    Demo preview
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {demoJobs.map((job) => {
+                    const Icon = job.icon
+
+                    return (
+                      <article
+                        key={job.title}
+                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:gap-4 sm:p-4"
+                      >
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white ${job.iconClassName}`}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate font-semibold text-slate-900">
+                            {job.title}
+                          </h3>
+
+                          <p className="mt-1 truncate text-sm text-slate-500">
+                            {job.company}
+                          </p>
+
+                          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+                            <MapPin className="h-3.5 w-3.5" />
+                            {job.location}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`hidden rounded-lg px-2.5 py-1 text-xs font-semibold sm:inline-flex ${job.matchClassName}`}
+                        >
+                          {job.match}
+                        </span>
+                      </article>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
 
+            <aside className="relative mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/10 lg:absolute lg:-right-24 lg:bottom-3 lg:mt-0 lg:w-72">
+              <h2 className="font-bold text-slate-900">
+                Your match breakdown
+              </h2>
+
+              <div className="mt-5 space-y-3">
+                {matchBreakdown.map(([label, score, width]) => (
+                  <div key={label}>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600">{label}</span>
+                      <span className="font-semibold text-slate-800">
+                        {score}
+                      </span>
+                    </div>
+
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 ${width}`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="features"
+        className="border-y border-slate-200 bg-white"
+      >
+        <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold text-purple-600">
+              Everything in one place
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              A clearer way to manage your career journey.
+            </h2>
+
+            <p className="mt-4 text-lg leading-8 text-slate-500">
+              CareerPilot brings matching, application preparation, and
+              progress tracking together in one focused workspace.
+            </p>
           </div>
 
-        )}
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {featureCards.map((feature) => {
+              const Icon = feature.icon
 
-      </div>
+              return (
+                <article
+                  key={feature.title}
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-purple-200 hover:shadow-lg hover:shadow-purple-950/5"
+                >
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-2xl ${feature.iconClassName}`}
+                  >
+                    <Icon className="h-6 w-6" />
+                  </div>
+
+                  <h3 className="mt-5 text-lg font-bold text-slate-900">
+                    {feature.title}
+                  </h3>
+
+                  <p className="mt-3 leading-7 text-slate-500">
+                    {feature.description}
+                  </p>
+                </article>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="how-it-works"
+        className="bg-slate-50"
+      >
+        <div className="mx-auto max-w-7xl px-6 py-16 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div>
+              <p className="text-sm font-semibold text-purple-600">
+                How it works
+              </p>
+
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                Your career journey in a few simple steps.
+              </h2>
+
+              <p className="mt-4 max-w-md text-lg leading-8 text-slate-500">
+                CareerPilot is designed to help you move from your CV to
+                a stronger application with clarity at every stage.
+              </p>
+            </div>
+
+            <ol className="grid gap-6 sm:grid-cols-2">
+              {journeySteps.map((step) => (
+                <li
+                  key={step.number}
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-sm font-bold text-white">
+                    {step.number}
+                  </span>
+
+                  <h3 className="mt-5 text-lg font-bold text-slate-900">
+                    {step.title}
+                  </h3>
+
+                  <p className="mt-3 leading-7 text-slate-500">
+                    {step.description}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="about"
+        className="border-t border-slate-200 bg-white"
+      >
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-24">
+          <div>
+            <p className="text-sm font-semibold text-purple-600">
+              About CareerPilot
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              A more focused way to manage your job search.
+            </h2>
+          </div>
+
+          <div className="rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-7 shadow-sm sm:p-9">
+            <p className="text-lg leading-8 text-slate-600">
+              CareerPilot is an AI-powered career assistant designed to make
+              the job search more focused and manageable. It helps you
+              discover relevant opportunities, understand how your background
+              matches each role, prepare tailored applications, and keep track
+              of your job search — all in one place.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-200 bg-gradient-to-br from-purple-50 via-white to-pink-50">
+        <div className="mx-auto max-w-4xl px-6 py-16 text-center lg:py-24">
+          <p className="text-sm font-semibold text-purple-600">
+            Build your next opportunity
+          </p>
+
+          <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+            Start building a more confident job search.
+          </h2>
+
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-500">
+            Create your CareerPilot account to prepare stronger
+            applications, organize your progress, and get ready for
+            what comes next.
+          </p>
+
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Link
+              href="/register"
+              className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-6 py-3.5 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:scale-[1.02] hover:opacity-90"
+            >
+              Get started →
+            </Link>
+
+            <Link
+              href="/login"
+              className="rounded-xl border border-slate-200 bg-white px-6 py-3.5 font-semibold text-slate-900 shadow-sm transition hover:border-purple-300 hover:bg-purple-50"
+            >
+              Log in
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            <span className="font-semibold text-slate-800">
+              CareerPilot AI
+            </span>{" "}
+            — your career, with more clarity.
+          </p>
+
+          <div className="flex gap-5">
+            <a
+              href="#features"
+              className="transition hover:text-purple-600"
+            >
+              Features
+            </a>
+
+            <a
+              href="#how-it-works"
+              className="transition hover:text-purple-600"
+            >
+              How it works
+            </a>
+
+            <Link
+              href="/login"
+              className="transition hover:text-purple-600"
+            >
+              Log in
+            </Link>
+          </div>
+        </div>
+      </footer>
     </main>
+  )
+}
+
+function SparklesIcon() {
+  return (
+    <span
+      aria-hidden="true"
+      className="text-base leading-none text-purple-600"
+    >
+      ✦
+    </span>
   )
 }
