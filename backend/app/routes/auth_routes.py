@@ -18,6 +18,9 @@ from app.services.user_service import (
     register_user,
     authenticate_user
 )
+from app.services.auth_service import (
+    create_access_token,
+)
 
 router = APIRouter()
 
@@ -76,8 +79,15 @@ async def register_user_route(
             detail="Email already exists",
         )
 
+    access_token = create_access_token(
+        data={
+            "sub": new_user.email,
+        }
+    )
+
     return {
-        "message": "User registered successfully"
+        "access_token": access_token,
+        "token_type": "bearer",
     }
 
 

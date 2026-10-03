@@ -1,12 +1,15 @@
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
+from app.database.database import get_db
 from app.dependencies.auth_dependencies import (
     get_current_user,
 )
 from app.main import app
 from app.models.user_model import User
+from app.services import auth_service
 
 
 client = TestClient(app)
@@ -35,6 +38,51 @@ def test_get_profile_requires_authentication():
 
     assert response.status_code == 401
 
+
+def test_real_access_token_authenticates_to_profile(
+    monkeypatch,
+):
+    user = make_user()
+    db = MagicMock()
+
+    (
+        db.query.return_value
+        .filter.return_value
+        .first.return_value
+    ) = user
+
+    monkeypatch.setattr(
+        auth_service.settings,
+        "SECRET_KEY",
+        "test-secret-key",
+    )
+
+    token = auth_service.create_access_token(
+        {
+            "sub": user.email,
+        }
+    )
+
+    app.dependency_overrides[get_db] = lambda: db
+
+    try:
+        response = client.get(
+            "/me",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "id": 1,
+            "full_name": "Test User",
+            "email": "test@example.com",
+            "resume_filename": None,
+            "profile_picture_filename": None,
+        }
+    finally:
+        app.dependency_overrides.clear()
 
 def test_get_current_user_profile():
     user = make_user()

@@ -87,8 +87,13 @@ export default function Navbar() {
 
   const isPublicLandingPage = pathname === "/"
   const isRegistrationPage = pathname === "/register"
+  const isOnboardingPage = pathname.startsWith("/onboarding/")
 
-  if (isPublicLandingPage || isRegistrationPage) {
+  if (
+    isPublicLandingPage ||
+    isRegistrationPage ||
+    isOnboardingPage
+  ) {
     return (
       <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -136,23 +141,33 @@ export default function Navbar() {
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
+          {isOnboardingPage ? (
+            <button
+              type="button"
+              onClick={logoutUser}
               className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-purple-300 hover:bg-purple-50"
             >
-              Log in
-            </Link>
-
-            {isPublicLandingPage && (
+              Log out
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
               <Link
-                href="/register"
-                className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                href="/login"
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-purple-300 hover:bg-purple-50"
               >
-                Get started
+                Log in
               </Link>
-            )}
-          </div>
+
+              {isPublicLandingPage && (
+                <Link
+                  href="/register"
+                  className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                >
+                  Get started
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </nav>
     )

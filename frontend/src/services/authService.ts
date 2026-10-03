@@ -25,12 +25,11 @@ export interface RegisterRequest {
   fullName: string
   email: string
   password: string
-  resumeFile?: File | null
-  profileImage?: File | null
 }
 
 export interface RegisterResponse {
-  message?: string
+  access_token: string
+  token_type: "bearer"
 }
 
 export async function register(
@@ -41,17 +40,6 @@ export async function register(
   formData.append("full_name", user.fullName)
   formData.append("email", user.email)
   formData.append("password", user.password)
-
-  if (user.resumeFile) {
-    formData.append("resume", user.resumeFile)
-  }
-
-  if (user.profileImage) {
-    formData.append(
-      "profile_picture",
-      user.profileImage
-    )
-  }
 
   return apiRequest<RegisterResponse>(
     "/register",

@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -8,15 +9,27 @@ from app.routes import auth_routes
 
 
 @pytest.mark.anyio
-async def test_register_user_success(monkeypatch):
+async def test_register_user_success_returns_access_token(
+    monkeypatch,
+):
     mock_db = MagicMock()
-
-    mock_user = MagicMock()
+    mock_user = SimpleNamespace(
+        email="test@example.com",
+    )
 
     monkeypatch.setattr(
         auth_routes,
         "register_user",
         MagicMock(return_value=mock_user),
+    )
+
+    mock_create_access_token = MagicMock(
+        return_value="new-user-access-token",
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        "create_access_token",
+        mock_create_access_token,
     )
 
     result = await auth_routes.register_user_route(
@@ -29,8 +42,14 @@ async def test_register_user_success(monkeypatch):
     )
 
     assert result == {
-        "message": "User registered successfully"
+        "access_token": "new-user-access-token",
+        "token_type": "bearer",
     }
+    mock_create_access_token.assert_called_once_with(
+        data={
+            "sub": "test@example.com",
+        }
+    )
 
 
 @pytest.mark.anyio

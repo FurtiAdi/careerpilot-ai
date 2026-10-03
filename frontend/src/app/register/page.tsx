@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { type FormEvent, useState } from "react"
 import {
   ArrowRight,
@@ -13,7 +12,6 @@ import {
 import { register } from "@/services/authService"
 
 export default function RegisterPage() {
-  const router = useRouter()
 
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
@@ -44,15 +42,18 @@ export default function RegisterPage() {
     try {
       setLoading(true)
 
-      await register({
+      const registration = await register({
         fullName: fullName.trim(),
         email: email.trim(),
         password,
       })
 
-      alert("Account created successfully. Please log in.")
+      localStorage.setItem(
+        "token",
+        registration.access_token
+      )
 
-      router.push("/login")
+      window.location.href = "/onboarding/cv"
     } catch (error) {
       console.error(error)
 
