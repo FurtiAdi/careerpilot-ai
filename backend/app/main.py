@@ -23,6 +23,9 @@ from app.routes.cover_letter_routes import (
 from app.routes.application_routes import (
     router as application_router,
 )
+from app.routes.career_profile_routes import (
+    router as career_profile_router,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,3 +92,4 @@ app.include_router(saved_resume_router)
 app.include_router(tailored_resume_router)
 app.include_router(cover_letter_router)
 app.include_router(application_router)
+app.include_router(career_profile_router)

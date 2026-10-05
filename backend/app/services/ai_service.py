@@ -1,9 +1,16 @@
+from collections.abc import Callable
+from typing import TypeVar
+
+from pydantic import BaseModel
 from openai import OpenAI, OpenAIError
 
 from app.models.ai_schema import AIAnalysisResponse
 from app.models.tailored_resume_schema import (
     TailoredResumeAIResponse,
     TailoredResumeContent,
+)
+from app.models.career_profile_schema import (
+    CareerProfileContent,
 )
 from app.models.cover_letter_schema import (
     CoverLetterAIResponse,
@@ -17,6 +24,8 @@ from app.services.ai_prompts import (
     build_tailored_resume_prompt,
     RESUME_STRUCTURE_SYSTEM_PROMPT,
     build_resume_structure_prompt,
+    CAREER_PROFILE_STRUCTURE_SYSTEM_PROMPT,
+    build_career_profile_structure_prompt,
 )
 
 from app.core.config import settings
@@ -40,6 +49,14 @@ class CoverLetterGenerationError(Exception):
 class ResumeStructuringError(Exception):
     """Raised when resume text cannot be structured safely."""
 
+class CareerProfileStructuringError(Exception):
+    """Raised when Career Profile text cannot be structured safely."""
+
+
+StructuredContent = TypeVar(
+    "StructuredContent",
+    bound=BaseModel,
+)
 
 def generate_ai_analysis(
     match_score: int,
@@ -198,18 +215,27 @@ def generate_cover_letter(
         ) from exc
 
 
-def structure_resume_text(
-    resume_text: str,
-    rejected_field: str | None = None,
-) -> TailoredResumeContent:
-    if not resume_text.strip():
-        raise ResumeStructuringError(
+def _structure_source_text(
+    source_text: str,
+    rejected_field: str | None,
+    *,
+    response_format: type[StructuredContent],
+    prompt_builder: Callable[
+        [str, str | None],
+        str,
+    ],
+    system_prompt: str,
+    error_class: type[Exception],
+    source_label: str,
+) -> StructuredContent:
+    if not source_text.strip():
+        raise error_class(
             "The source resume contains no extractable text."
         )
 
-    prompt = build_resume_structure_prompt(
-        resume_text,
-        rejected_field=rejected_field,
+    prompt = prompt_builder(
+        source_text,
+        rejected_field = rejected_field,
     )
 
     try:
@@ -219,31 +245,63 @@ def structure_resume_text(
             messages=[
                 {
                     "role": "system",
-                    "content": RESUME_STRUCTURE_SYSTEM_PROMPT,
+                    "content": system_prompt,
                 },
                 {
                     "role": "user",
                     "content": prompt,
                 },
             ],
-            response_format=TailoredResumeContent,
+            response_format=response_format,
         )
 
         message = response.choices[0].message
 
         if message.refusal:
-            raise ResumeStructuringError(
-                "The AI provider refused to structure the resume."
+            raise error_class(
+                f"The AI provider refused to structure the "
+                f"{source_label.casefold()}."
             )
 
         if message.parsed is None:
-            raise ResumeStructuringError(
-                "The structured resume response could not be parsed."
+            raise error_class(
+                f"The structured {source_label.casefold()} "
+                "response could not be parsed."
             )
 
         return message.parsed
 
     except OpenAIError as exc:
-        raise ResumeStructuringError(
-            "Resume structuring is temporarily unavailable."
+        raise error_class(
+            f"{source_label} structuring is temporarily unavailable."
         ) from exc
+
+
+def structure_resume_text(
+    resume_text: str,
+    rejected_field: str | None = None,
+) -> TailoredResumeContent:
+    return _structure_source_text(
+        resume_text,
+        rejected_field,
+        response_format=TailoredResumeContent,
+        prompt_builder=build_resume_structure_prompt,
+        system_prompt=RESUME_STRUCTURE_SYSTEM_PROMPT,
+        error_class=ResumeStructuringError,
+        source_label="Resume",
+    )
+
+
+def structure_career_profile_text(
+    resume_text: str,
+    rejected_field: str | None = None,
+) -> CareerProfileContent:
+    return _structure_source_text(
+        resume_text,
+        rejected_field,
+        response_format=CareerProfileContent,
+        prompt_builder=build_career_profile_structure_prompt,
+        system_prompt=CAREER_PROFILE_STRUCTURE_SYSTEM_PROMPT,
+        error_class=CareerProfileStructuringError,
+        source_label="Career Profile",
+    )

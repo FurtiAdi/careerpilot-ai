@@ -10,6 +10,7 @@ from app.models.analysis_model import Analysis
 from app.models.tailored_resume_model import TailoredResume
 from app.models.user_model import User
 from app.models.saved_resume_model import SavedResume
+from app.models.career_profile_model import CareerProfile
 from app.models.cover_letter_model import CoverLetter
 from app.models.application_model import (
     Application,

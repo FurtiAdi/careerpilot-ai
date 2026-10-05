@@ -7,6 +7,9 @@ from app.models.tailored_resume_schema import (
     ResumeProject,
     TailoredResumeContent,
 )
+from app.models.career_profile_schema import (
+    CareerProfileContent,
+)
 from app.services import resume_service
 from types import SimpleNamespace
 
@@ -25,6 +28,27 @@ def make_structured_resume() -> TailoredResumeContent:
                 "end_date": "2024",
                 "bullets": [
                     "Built Python applications."
+                ],
+            }
+        ],
+        skills=["Python"],
+    )
+
+
+def make_career_profile() -> CareerProfileContent:
+    return CareerProfileContent(
+        contact={
+            "full_name": "Ada Lovelace",
+            "email": "ada@example.com",
+        },
+        experience=[
+            {
+                "title": "Software Engineer",
+                "employer": "Real Company",
+                "start_date": "2022",
+                "end_date": "2024",
+                "bullets": [
+                    "Built Python applications.",
                 ],
             }
         ],
@@ -460,4 +484,100 @@ def test_saved_resume_record_is_extracted_and_grounded(
     )
     mock_ground.assert_called_once_with(
         "Verified selected resume text"
+    )
+
+
+def test_career_profile_evidence_rejects_invented_content():
+    content = make_career_profile()
+    content.skills = ["Invented Skill"]
+
+    with pytest.raises(
+        resume_service.ResumeEvidenceError,
+        match="content.skills",
+    ):
+        resume_service.validate_structured_content_evidence(
+            resume_text=make_resume_text(),
+            structured_content=content,
+        )
+
+
+def test_build_grounded_career_profile_retries_rejected_field(
+    monkeypatch,
+):
+    rejected = make_career_profile()
+    rejected.skills = ["Invented Skill"]
+    corrected = make_career_profile()
+
+    mock_structure = MagicMock(
+        side_effect=[rejected, corrected]
+    )
+    monkeypatch.setattr(
+        resume_service,
+        "structure_career_profile_text",
+        mock_structure,
+    )
+
+    result = (
+        resume_service.build_grounded_career_profile_content(
+            make_resume_text()
+        )
+    )
+
+    assert result is corrected
+    assert mock_structure.call_args_list == [
+        call(make_resume_text()),
+        call(
+            make_resume_text(),
+            rejected_field="content.skills[0]",
+        ),
+    ]
+
+
+def test_saved_resume_record_builds_grounded_career_profile(
+    tmp_path,
+    monkeypatch,
+):
+    resume_path = tmp_path / "selected-resume.pdf"
+    resume_path.write_bytes(b"%PDF-1.4 test")
+
+    monkeypatch.setattr(
+        resume_service.settings,
+        "RESUME_DIR",
+        str(tmp_path),
+    )
+
+    mock_extract = MagicMock(
+        return_value="Verified career profile text"
+    )
+    profile_content = make_career_profile()
+    mock_ground = MagicMock(
+        return_value=profile_content
+    )
+
+    monkeypatch.setattr(
+        resume_service,
+        "extract_text_from_pdf",
+        mock_extract,
+    )
+    monkeypatch.setattr(
+        resume_service,
+        "build_grounded_career_profile_content",
+        mock_ground,
+    )
+
+    result = (
+        resume_service
+        .build_grounded_career_profile_content_from_record(
+            SimpleNamespace(
+                storage_filename="selected-resume.pdf"
+            )
+        )
+    )
+
+    assert result is profile_content
+    mock_extract.assert_called_once_with(
+        str(resume_path)
+    )
+    mock_ground.assert_called_once_with(
+        "Verified career profile text"
     )

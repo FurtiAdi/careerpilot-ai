@@ -4,21 +4,34 @@ import re
 import unicodedata
 
 from collections.abc import Iterator
+from typing import TypeVar
 
+from pydantic import BaseModel
 import fitz
 
 from app.core.config import settings
 from app.models.tailored_resume_schema import (
     TailoredResumeContent,
 )
+from app.models.career_profile_schema import (
+    CareerProfileContent,
+)
 from app.models.saved_resume_model import SavedResume
 from app.models.user_model import User
-from app.services.ai_service import structure_resume_text
+from app.services.ai_service import (
+    structure_career_profile_text,
+    structure_resume_text,
+)
 
 logger = logging.getLogger(__name__)
 
 MALFORMED_UNICODE_PATTERN = re.compile(
     r"\x00([0-9a-fA-F]{2})"
+)
+
+StructuredContent = TypeVar(
+    "StructuredContent",
+    bound=BaseModel,
 )
 
 class ResumeEvidenceError(ValueError):
@@ -75,9 +88,9 @@ def _iter_string_values(
             )
 
 
-def validate_structured_resume_evidence(
+def validate_structured_content_evidence(
     resume_text: str,
-    structured_content: TailoredResumeContent,
+    structured_content: BaseModel,
 ) -> None:
     normalized_source = _normalize_evidence(
         resume_text
@@ -106,6 +119,16 @@ def validate_structured_resume_evidence(
             raise ResumeEvidenceError(field_path)
 
 
+def validate_structured_resume_evidence(
+    resume_text: str,
+    structured_content: TailoredResumeContent,
+) -> None:
+    validate_structured_content_evidence(
+        resume_text=resume_text,
+        structured_content=structured_content,
+    )
+
+
 def _repair_malformed_unicode(
     value: object,
 ) -> object:
@@ -132,9 +155,9 @@ def _repair_malformed_unicode(
     return value
 
 
-def _repair_structured_resume_encoding(
-    content: TailoredResumeContent,
-) -> TailoredResumeContent:
+def _repair_structured_content_encoding(
+    content: StructuredContent,
+) -> StructuredContent:
     serialized = content.model_dump(mode="json")
     repaired = _repair_malformed_unicode(
         serialized
@@ -143,8 +166,14 @@ def _repair_structured_resume_encoding(
     if repaired == serialized:
         return content
 
-    return TailoredResumeContent.model_validate(
-        repaired
+    return type(content).model_validate(repaired)
+
+
+def _repair_structured_resume_encoding(
+    content: TailoredResumeContent,
+) -> TailoredResumeContent:
+    return _repair_structured_content_encoding(
+        content
     )
 
 
@@ -339,6 +368,48 @@ def build_grounded_resume_content(
     return structured_content
 
 
+def build_grounded_career_profile_content(
+    resume_text: str,
+) -> CareerProfileContent:
+    structured_content = structure_career_profile_text(
+        resume_text
+    )
+    structured_content = (
+        _repair_structured_content_encoding(
+            structured_content
+        )
+    )
+
+    try:
+        validate_structured_content_evidence(
+            resume_text=resume_text,
+            structured_content=structured_content,
+        )
+    except ResumeEvidenceError as exc:
+        logger.warning(
+            "Retrying Career Profile structuring after "
+            "rejected field %s",
+            exc.field_path,
+        )
+
+        structured_content = structure_career_profile_text(
+            resume_text,
+            rejected_field=exc.field_path,
+        )
+        structured_content = (
+            _repair_structured_content_encoding(
+                structured_content
+            )
+        )
+
+        validate_structured_content_evidence(
+            resume_text=resume_text,
+            structured_content=structured_content,
+        )
+
+    return structured_content
+
+
 def extract_text_from_pdf(pdf_path: str):
 
     document = fitz.open(pdf_path)
@@ -354,9 +425,9 @@ def extract_text_from_pdf(pdf_path: str):
     return extracted_text
 
 
-def _build_grounded_resume_content_from_filename(
+def _extract_saved_resume_text_from_filename(
     filename: str | None,
-) -> TailoredResumeContent:
+) -> str:
     if not filename:
         raise SavedResumeNotFoundError(
             "A saved source resume is required."
@@ -384,9 +455,17 @@ def _build_grounded_resume_content_from_filename(
             "The saved source resume was not found."
         )
 
-    resume_text = extract_text_from_pdf(resume_path)
+    return extract_text_from_pdf(resume_path)
 
-    return build_grounded_resume_content(resume_text)
+
+def _build_grounded_resume_content_from_filename(
+    filename: str | None,
+) -> TailoredResumeContent:
+    return build_grounded_resume_content(
+        _extract_saved_resume_text_from_filename(
+            filename
+        )
+    )
 
 
 def build_grounded_saved_resume_content(
@@ -401,4 +480,16 @@ def build_grounded_saved_resume_content_from_record(
 ) -> TailoredResumeContent:
     return _build_grounded_resume_content_from_filename(
         saved_resume.storage_filename
+    )
+
+
+def build_grounded_career_profile_content_from_record(
+    saved_resume: SavedResume,
+) -> CareerProfileContent:
+    resume_text = _extract_saved_resume_text_from_filename(
+        saved_resume.storage_filename
+    )
+
+    return build_grounded_career_profile_content(
+        resume_text
     )

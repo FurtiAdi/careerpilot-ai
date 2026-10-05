@@ -20,6 +20,7 @@ import {
   type SavedResume,
   uploadSavedResume,
 } from "@/services/savedResumeService"
+import { extractCareerProfile } from "@/services/careerProfileService"
 
 const MAX_RESUME_SIZE_BYTES = 5 * 1024 * 1024
 
@@ -31,6 +32,8 @@ export default function CvOnboardingPage() {
   )
   const [uploadedResume, setUploadedResume] =
     useState<SavedResume | null>(null)
+  const [profilePrepared, setProfilePrepared] =
+    useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -44,59 +47,70 @@ export default function CvOnboardingPage() {
 
   const selectFile = (
     event: ChangeEvent<HTMLInputElement>
-  ) => {
+    ) => {
     const file = event.target.files?.[0] ?? null
 
     setError(null)
-    setSelectedFile(null)
 
     if (!file) {
-      return
+        return
     }
 
     if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setError("Please choose a PDF resume.")
-      return
+        setSelectedFile(null)
+        setError("Please choose a PDF resume.")
+        return
     }
 
     if (file.size > MAX_RESUME_SIZE_BYTES) {
-      setError("Your resume must not exceed 5 MiB.")
-      return
+        setSelectedFile(null)
+        setError("Your resume must not exceed 5 MiB.")
+        return
     }
 
+    setUploadedResume(null)
+    setProfilePrepared(false)
     setSelectedFile(file)
   }
 
   const uploadCv = async (
     event: FormEvent<HTMLFormElement>
-  ) => {
+    ) => {
     event.preventDefault()
 
     if (!selectedFile) {
-      setError("Choose a PDF resume before continuing.")
-      return
+        setError("Choose a PDF resume before continuing.")
+        return
     }
 
     try {
-      setLoading(true)
-      setError(null)
+        setLoading(true)
+        setError(null)
 
-      const savedResume = await uploadSavedResume(
-        selectedFile
-      )
+        let savedResume = uploadedResume
 
-      setUploadedResume(savedResume)
-      setSelectedFile(null)
+        if (!savedResume) {
+        savedResume = await uploadSavedResume(selectedFile)
+        setUploadedResume(savedResume)
+        }
+
+        await extractCareerProfile(savedResume.id)
+
+        setProfilePrepared(true)
+        setSelectedFile(null)
     } catch (uploadError) {
-      setError(
+        setError(
         uploadError instanceof Error
-          ? uploadError.message
-          : "We could not upload your resume. Please try again."
-      )
+            ? uploadError.message
+            : (
+                "We could not prepare your Career Profile. "
+                + "Please try again."
+            )
+        )
     } finally {
-      setLoading(false)
+        setLoading(false)
     }
-  }
+}
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 pb-12 pt-28 text-slate-900">
@@ -124,7 +138,7 @@ export default function CvOnboardingPage() {
             </p>
           </div>
 
-          {uploadedResume ? (
+          {uploadedResume && profilePrepared ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
               <div className="flex items-start gap-4">
                 <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
@@ -135,9 +149,9 @@ export default function CvOnboardingPage() {
                   </h2>
 
                   <p className="mt-1 text-sm text-emerald-800">
-                    {uploadedResume.original_filename} is saved securely
-                    and ready for profile review in the next onboarding
-                    milestone.
+                    {uploadedResume.original_filename} is saved securely,
+                    and your Career Profile draft has been prepared from
+                    its verified content.
                   </p>
                 </div>
               </div>
@@ -184,6 +198,13 @@ export default function CvOnboardingPage() {
                 />
               </label>
 
+              {uploadedResume && !profilePrepared && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    Your CV has been uploaded. Retry to prepare your
+                    Career Profile draft.
+                </div>
+            )}
+
               {selectedFile && (
                 <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <FileText className="h-5 w-5 shrink-0 text-purple-600" />
@@ -219,7 +240,9 @@ export default function CvOnboardingPage() {
                     Uploading CV...
                   </>
                 ) : (
-                  "Upload CV"
+                  uploadedResume
+                    ? "Retry profile extraction"
+                    : "Upload CV"
                 )}
               </button>
             </form>
